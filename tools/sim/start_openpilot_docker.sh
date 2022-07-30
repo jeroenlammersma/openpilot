@@ -15,7 +15,7 @@ else
   # expose X to the container
   xhost +local:root
 
-  docker pull ghcr.io/commaai/openpilot-sim:latest
+  docker pull ghcr.io/jeroenlammersma/openpilot-sim:latest
   CMD="./tmux_script.sh $*"
   EXTRA_ARGS="${EXTRA_ARGS} -it"
 fi
@@ -32,5 +32,5 @@ docker run --net=host\
   -e QT_X11_NO_MITSHM=1 \
   -w "$OPENPILOT_DIR/tools/sim" \
   $EXTRA_ARGS \
-  ghcr.io/commaai/openpilot-sim:latest \
+  ghcr.io/jeroenlammersma/openpilot-sim:latest \
   /bin/bash -c "$CMD"

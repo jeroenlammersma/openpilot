@@ -49,7 +49,7 @@ chmod +x $CONTINUE_PATH
 
 # set up environment
 if [ ! -d "$SOURCE_DIR" ]; then
-  git clone https://github.com/commaai/openpilot.git $SOURCE_DIR
+  git clone https://github.com/jeroenlammersma/openpilot.git $SOURCE_DIR
 fi
 cd $SOURCE_DIR
 

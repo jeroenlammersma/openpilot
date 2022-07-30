@@ -5,7 +5,7 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-BASE="https://github.com/commaai/openpilot/pull/"
+BASE="https://github.com/jeroenlammersma/openpilot/pull/"
 PR_NUM="$(echo $1 | grep -o -E '[0-9]+')"
 
 curl -L $BASE/$PR_NUM.patch | git apply
