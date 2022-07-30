@@ -130,7 +130,7 @@ class RadarD():
       # create the track if it doesn't exist or it's a new track
       if ids not in self.tracks:
         self.tracks[ids] = Track(v_lead, self.kalman_params)
-      self.tracks[ids].update(rpt[0], rpt[1], rpt[2], v_lead, rpt[3])
+      self.tracks[ids].update(rpt[0], rpt[1], rpt[2], v_lead, rpt[3], self.v_ego)
 
     idens = list(sorted(self.tracks.keys()))
     track_pts = [self.tracks[iden].get_key_for_cluster() for iden in idens]
