@@ -35,6 +35,7 @@ class CAR:
   IMPREZA_2020 = "SUBARU IMPREZA SPORT 2020"
   FORESTER = "SUBARU FORESTER 2019"
   OUTBACK = "SUBARU OUTBACK 6TH GEN"
+  LEGACY = "SUBARU LEGACY 7TH GEN"
 
   # Pre-global
   FORESTER_PREGLOBAL = "SUBARU FORESTER 2017 - 2018"
@@ -52,6 +53,7 @@ class SubaruCarInfo(CarInfo):
 CAR_INFO: Dict[str, Union[SubaruCarInfo, List[SubaruCarInfo]]] = {
   CAR.ASCENT: SubaruCarInfo("Subaru Ascent 2019-21", "All"),
   CAR.OUTBACK: SubaruCarInfo("Subaru Outback 2020-22", "All"),
+  CAR.LEGACY: SubaruCarInfo("Subaru Legacy 2020", "All"),
   CAR.IMPREZA: [
     SubaruCarInfo("Subaru Impreza 2017-19"),
     SubaruCarInfo("Subaru Crosstrek 2018-19", video_link="https://youtu.be/Agww7oE1k-s?t=26"),
@@ -100,6 +102,23 @@ FW_VERSIONS = {
       b'\001\xfe\xf9\000\000',
       b'\x01\xfe\xf7\x00\x00',
       b'\xf1\x00\xa4\x10@',
+    ],
+  },
+  CAR.LEGACY: {
+    (Ecu.esp, 0x7b0, None): [
+      b'\xa1\\  x04\x01',
+    ],
+    (Ecu.eps, 0x746, None): [
+      b'\x9b\xc0\x11\x00',
+    ],
+    (Ecu.fwdCamera, 0x787, None): [
+      b'\x00\x00e\x80\x00\x1f@ \x19\x00',
+    ],
+    (Ecu.engine, 0x7e0, None): [
+      b'\xde\"a0\x07',
+    ],
+    (Ecu.transmission, 0x7e1, None): [
+      b'\xa5\xf6\x05@\x00',
     ],
   },
   CAR.IMPREZA: {
@@ -467,11 +486,12 @@ DBC = {
   CAR.IMPREZA_2020: dbc_dict('subaru_global_2017_generated', None),
   CAR.FORESTER: dbc_dict('subaru_global_2017_generated', None),
   CAR.OUTBACK: dbc_dict('subaru_global_2017_generated', None),
+  CAR.LEGACY: dbc_dict('subaru_global_2017_generated', None),
   CAR.FORESTER_PREGLOBAL: dbc_dict('subaru_forester_2017_generated', None),
   CAR.LEGACY_PREGLOBAL: dbc_dict('subaru_outback_2015_generated', None),
   CAR.OUTBACK_PREGLOBAL: dbc_dict('subaru_outback_2015_generated', None),
   CAR.OUTBACK_PREGLOBAL_2018: dbc_dict('subaru_outback_2019_generated', None),
 }
 
-GLOBAL_GEN2 = (CAR.OUTBACK, )
+GLOBAL_GEN2 = (CAR.OUTBACK, CAR.LEGACY)
 PREGLOBAL_CARS = (CAR.FORESTER_PREGLOBAL, CAR.LEGACY_PREGLOBAL, CAR.OUTBACK_PREGLOBAL, CAR.OUTBACK_PREGLOBAL_2018)
