@@ -58,6 +58,9 @@ procs = [
 
   # Experimental
   PythonProcess("rawgpsd", "selfdrive.sensord.rawgps.rawgpsd", enabled=os.path.isfile("/persist/comma/use-quectel-rawgps")),
+
+  # Driving coach
+  PythonProcess("coachd", "selfdrive.coachd.coachd"),
 ]
 
 managed_processes = {p.name: p for p in procs}
