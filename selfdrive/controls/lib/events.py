@@ -948,9 +948,9 @@ EVENTS: Dict[int, Dict[str, Union[Alert, AlertCallbackType]]] = {
 
   EventName.promptTailgating: {
     ET.PERMANENT: Alert(
-      "Tailgating",
-      "Keep distance",
-      AlertStatus.normal, AlertSize.small,
+      "TAILGATING",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
       Priority.MID, VisualAlert.fcw, AudibleAlert.promptRepeat, .1),
   },
 
@@ -959,7 +959,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, AlertCallbackType]]] = {
       "TAILGATING",
       "Keep distance",
       AlertStatus.userPrompt, AlertSize.mid,
-      Priority.HIGH, VisualAlert.fcw, AudibleAlert.warningSoft, .1),
+      Priority.MID, VisualAlert.fcw, AudibleAlert.warningSoft, .1),
   },
 
 }
