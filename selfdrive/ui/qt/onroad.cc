@@ -173,6 +173,7 @@ void OnroadAlerts::paintEvent(QPaintEvent *event) {
 NvgWindow::NvgWindow(VisionStreamType type, QWidget* parent) : fps_filter(UI_FREQ, 3, 1. / UI_FREQ), CameraViewWidget("camerad", type, true, parent) {
   engage_img = loadPixmap("../assets/img_chffr_wheel.png", {img_size, img_size});
   dm_img = loadPixmap("../assets/img_driver_face.png", {img_size, img_size});
+  tailgating_img = loadPixmap("../assets/coach/tailgating_warning.svg", {tailgating_img_size, tailgating_img_size});
 }
 
 void NvgWindow::updateState(const UIState &s) {
@@ -225,6 +226,10 @@ void NvgWindow::updateState(const UIState &s) {
   } else {
     CameraViewWidget::updateCalibration(DEFAULT_CALIBRATION);
   }
+
+  // driving coach
+  auto warningLevel = sm["drivingCoachState"].getDrivingCoachState().getTailgatingStatus().getWarningLevel();
+  setProperty("showTailgatingWarning", warningLevel != 0);
 }
 
 void NvgWindow::drawHud(QPainter &p) {
@@ -387,6 +392,13 @@ void NvgWindow::drawHud(QPainter &p) {
              dm_img, blackColor(70), dmActive ? 1.0 : 0.2);
   }
   p.restore();
+
+  // tailgating warning icon
+  if (showTailgatingWarning) {
+    const int x = rect().right() - radius / (1.5 * 1.65) - (bdr_s * 2);
+    const int y = rect().top() + header_h;
+    p.drawPixmap(x - radius / 2, y - radius / 2, tailgating_img);
+  }
 }
 
 void NvgWindow::drawText(QPainter &p, int x, int y, const QString &text, int alpha) {
