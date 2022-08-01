@@ -253,6 +253,7 @@ CONFIGS = [
       "can": ["controlsState", "carState", "carControl", "sendcan", "carEvents", "carParams"],
       "deviceState": [], "pandaStates": [], "peripheralState": [], "liveCalibration": [], "driverMonitoringState": [], "longitudinalPlan": [], "lateralPlan": [], "liveLocationKalman": [], "liveParameters": [], "radarState": [],
       "modelV2": [], "driverCameraState": [], "roadCameraState": [], "wideRoadCameraState": [], "managerState": [], "testJoystick": [],
+      "drivingCoachState": [],
     },
     ignore=["logMonoTime", "valid", "controlsState.startMonoTime", "controlsState.cumLagMs"],
     init_callback=fingerprint,
@@ -372,6 +373,18 @@ CONFIGS = [
     init_callback=get_car_params,
     should_recv_callback=laika_rcv_callback,
     tolerance=NUMPY_TOLERANCE,
+    fake_pubsubmaster=True,
+  ),
+  ProcessConfig(
+    proc_name="coachd",
+    pub_sub={
+      "drivingCoachState": ["tailgatingStatus"],
+      "carState": [], "radarState": [],
+    },
+    ignore=["logMonoTime"],
+    init_callback=None,
+    should_recv_callback=None,
+    tolerance=None,
     fake_pubsubmaster=True,
   ),
 ]
