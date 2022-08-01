@@ -940,26 +940,26 @@ EVENTS: Dict[int, Dict[str, Union[Alert, AlertCallbackType]]] = {
 
   EventName.tailgating: {
     ET.PERMANENT: Alert(
-      "Tailgating",
       "",
-      AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.LOWER, VisualAlert.none, AudibleAlert.prompt, .1),
   },
 
   EventName.promptTailgating: {
     ET.PERMANENT: Alert(
-      "TAILGATING",
+      "Tailgating",
       "",
-      AlertStatus.userPrompt, AlertSize.small,
-      Priority.MID, VisualAlert.fcw, AudibleAlert.promptRepeat, .1),
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.fcw, AudibleAlert.prompt, .1),
   },
 
   EventName.persistentTailgating: {
     ET.PERMANENT: Alert(
       "TAILGATING",
-      "Keep distance",
-      AlertStatus.userPrompt, AlertSize.mid,
-      Priority.MID, VisualAlert.fcw, AudibleAlert.warningSoft, .1),
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.MID, VisualAlert.fcw, AudibleAlert.promptRepeat, .1),
   },
 
 }

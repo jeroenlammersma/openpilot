@@ -101,7 +101,7 @@ class Controls:
         ignore += ['driverCameraState', 'managerState']
       if params.get_bool('WideCameraOnly'):
         ignore += ['roadCameraState']
-      self.sm = messaging.SubMaster(['deviceState', 'pandaStates', 'peripheralState', 'modelV2', 'liveCalibration',
+      self.sm = messaging.SubMaster(['deviceState', 'drivingCoachState', 'pandaStates', 'peripheralState', 'modelV2', 'liveCalibration',
                                      'driverMonitoringState', 'longitudinalPlan', 'lateralPlan', 'liveLocationKalman',
                                      'managerState', 'liveParameters', 'radarState'] + self.camera_packets + joystick_packet,
                                     ignore_alive=ignore, ignore_avg_freq=['radarState', 'longitudinalPlan'])
@@ -401,6 +401,12 @@ class Controls:
     if CS.brakePressed and v_future >= self.CP.vEgoStarting \
       and self.CP.openpilotLongitudinalControl and CS.vEgo < 0.3:
       self.events.add(EventName.noTarget)
+    
+    if (tailgating_level := self.sm['drivingCoachState'].tailgatingStatus.warningLevel) != 0:
+      switch = {1: EventName.tailgating,
+                2: EventName.promptTailgating,
+                3: EventName.persistentTailgating}
+      self.events.add(switch.get(tailgating_level))
 
   def data_sample(self):
     """Receive data from sockets and update carState"""
