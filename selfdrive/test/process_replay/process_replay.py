@@ -375,18 +375,6 @@ CONFIGS = [
     tolerance=NUMPY_TOLERANCE,
     fake_pubsubmaster=True,
   ),
-  ProcessConfig(
-    proc_name="coachd",
-    pub_sub={
-      "drivingCoachState": ["tailgatingStatus"],
-      "carState": [], "radarState": [],
-    },
-    ignore=["logMonoTime"],
-    init_callback=None,
-    should_recv_callback=None,
-    tolerance=None,
-    fake_pubsubmaster=True,
-  ),
 ]
 
 
