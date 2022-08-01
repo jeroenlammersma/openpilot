@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
 from typing import Dict, Optional, Type, Union
 
 from cereal import log, messaging
 from selfdrive.coachd.modules.base import CoachModule
-from selfdrive.coachd.modules.tailgating import TailgatingStatus
+from selfdrive.coachd.modules.tailgating_detection import TailgatingStatus
 
 # key should match the name of the field in DrivingCoachState
 # module should be derived from base class CoachModule
