@@ -1,6 +1,7 @@
-from typing import Union
+from typing import Dict, Optional, Type, Union
 
 from cereal import log, messaging
+from selfdrive.coachd.modules.base import CoachModule
 from selfdrive.coachd.modules.tailgating import TailgatingStatus
 
 # key should match the name of the field in DrivingCoachState
@@ -12,9 +13,11 @@ COACH_MODULES = {
 
 
 class CoachD():
-  def __init__(self) -> None:
+  def __init__(self, modules: Optional[Dict[str, Type[CoachModule]]] = None) -> None:
     # initialize modules
-    self.modules = {field: module() for field, module in COACH_MODULES.items()}
+    if modules is None:
+      modules = dict(COACH_MODULES)
+    self.modules = {field: module() for field, module in modules.items()}
 
   def update(self, sm: messaging.SubMaster) -> log.DrivingCoachState:
     dat = messaging.new_message('drivingCoachState')
