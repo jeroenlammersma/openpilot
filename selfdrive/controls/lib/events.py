@@ -951,7 +951,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, AlertCallbackType]]] = {
       "Tailgating",
       "",
       AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.fcw, AudibleAlert.prompt, .1),
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .1),
   },
 
   EventName.persistentTailgating: {
