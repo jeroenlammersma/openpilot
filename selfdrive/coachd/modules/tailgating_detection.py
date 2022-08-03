@@ -2,7 +2,7 @@ from cereal import log, messaging
 from selfdrive.coachd.modules.base import CoachModule
 
 THW_THRESHOLD = 1  # in m, ego is tailgating when THW is below threshold
-MINIMAL_VELOCITY = 5  # in m/s, ego is not tailgating when velocity is below minimal
+MINIMUM_VELOCITY = 5  # in m/s, ego is not tailgating when velocity is below minimal
 
 # all in s
 TIME_TILL_LEVEL_1 = 5
@@ -10,9 +10,9 @@ TIME_TILL_LEVEL_2 = 10
 TIME_TILL_LEVEL_3 = 20
 
 # all in ns
-LEVEL_1_THRESHOLD = TIME_TILL_LEVEL_1 * 1e+9
-LEVEL_2_THRESHOLD = TIME_TILL_LEVEL_2 * 1e+9
-LEVEL_3_THRESHOLD = TIME_TILL_LEVEL_3 * 1e+9
+LEVEL_1_THRESHOLD = int(TIME_TILL_LEVEL_1 * 1e+9)
+LEVEL_2_THRESHOLD = int(TIME_TILL_LEVEL_2 * 1e+9)
+LEVEL_3_THRESHOLD = int(TIME_TILL_LEVEL_3 * 1e+9)
 
 
 def get_closest_lead(lead_one: log.RadarState.LeadData,
@@ -25,11 +25,12 @@ def get_closest_lead(lead_one: log.RadarState.LeadData,
 def is_tailgating(thw: float, v_ego: float) -> bool:
   # ego is tailgating when thw of lead is between 0 and threshold,
   # and velocity of ego is greater than minimum
-  return thw != 0 and thw < THW_THRESHOLD and v_ego >= MINIMAL_VELOCITY
+  return thw != 0 and thw < THW_THRESHOLD and v_ego >= MINIMUM_VELOCITY
 
 
 class TailgatingStatus(CoachModule):
   def __init__(self) -> None:
+    # TODO: add properties
     self.start_time = 0
     self.v_ego = 0.
 
@@ -59,12 +60,14 @@ class TailgatingStatus(CoachModule):
     warning_level = self.determine_warning_level(current_time)
 
     # create TailgatingStatus
+    # TODO: add duration (in ms) + cereal field
     return {
         "isTailgating": bool(tailgating),
         "startTime": int(self.start_time),
         "warningLevel": int(warning_level)
     }
 
+  # TODO: this check could be removed when duration is used? (I think)
   def currently_measuring(self) -> bool:
     return self.start_time > 0
 
@@ -74,6 +77,7 @@ class TailgatingStatus(CoachModule):
   def stop_measurement(self) -> None:
     self.start_time = 0
 
+  # TODO: add as property?
   def determine_warning_level(self, mono_time: int) -> int:
     if not self.currently_measuring():  # level 0
       return 0
