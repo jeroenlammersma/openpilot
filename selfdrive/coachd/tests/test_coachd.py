@@ -11,17 +11,17 @@ class TestCoachD(unittest.TestCase):
   def test_DrivingCoachState_struct_defined(self) -> None:
     """Ensure DrivingCoachState struct is defined in capnp schema"""
     s = "DrivingCoachState"
-    structs = [ n.name for n in log.schema.get_proto().nestedNodes ]
+    structs = [n.name for n in log.schema.get_proto().nestedNodes]
     self.assertTrue(s in structs, msg="%s struct not in schema" % (s))
-  
+
   def test_drivingCoachState_defined(self) -> None:
-    """Ensure drivingCoachState is defined in capnp schema"""
+    """Ensure drivingCoachState field is defined in capnp schema"""
     field = "drivingCoachState"
     messages = log.Event.schema.fieldnames
     self.assertTrue(field in messages, msg="%s not in Event schema" % (field))
 
   def test_modules_defined(self) -> None:
-    """Ensure all fields from COACH_MODULES are defined in capnp schema"""
+    """Ensure COACH_MODULES are defined in capnp schema"""
     fieldnames = log.DrivingCoachState.schema.fieldnames
 
     for field in COACH_MODULES.keys():
@@ -35,9 +35,9 @@ class TestCoachD(unittest.TestCase):
         return
 
     CD = CoachD(modules={"custom_module": CustomModule})
-    self.assertTrue("custom_module" in CD.modules.keys())
+    self.assertTrue("custom_module" in CD.modules.keys(),
+                    msg="Module passed to constructor not in modules")
 
 
 if __name__ == "__main__":
   unittest.main()
-

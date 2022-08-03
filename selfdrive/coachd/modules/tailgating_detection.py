@@ -1,8 +1,8 @@
 from cereal import log, messaging
 from selfdrive.coachd.modules.base import CoachModule
 
-THW_THRESHOLD = 1  # in m, ego is tailgating when THW is below threshold
-MINIMUM_VELOCITY = 5  # in m/s, ego is not tailgating when velocity is below minimal
+THW_THRESHOLD = 1.  # in m, ego is tailgating when THW is below threshold
+MINIMUM_VELOCITY = 5.  # in m/s, ego is not tailgating when velocity is below minimal
 
 # all in s
 TIME_TILL_LEVEL_1 = 5
@@ -30,7 +30,8 @@ def is_tailgating(thw: float, v_ego: float) -> bool:
 
 class TailgatingStatus(CoachModule):
   def __init__(self) -> None:
-    # TODO: add properties
+    # TODO: add properties ???
+    self.measuring = False
     self.start_time = 0
     self.v_ego = 0.
 
@@ -49,39 +50,34 @@ class TailgatingStatus(CoachModule):
     # determine if ego is tailgating
     tailgating = is_tailgating(closest_lead.thw, self.v_ego)
 
-    # if tailgating, start measurement if not already measuring
-    if tailgating and not self.currently_measuring():
+    # start measurement if tailgating and not measuring yet
+    if tailgating and not self.measuring:
       self.start_measurement(current_time)
-    # if not tailgating and currently measuring, stop measurement
-    elif not tailgating and self.currently_measuring():
+    # stop measurement if not tailgating and still measuring
+    elif not tailgating and self.measuring:
       self.stop_measurement()
 
-    # determine warning level
-    warning_level = self.determine_warning_level(current_time)
+    # determine warning level (0 when not measuring)
+    warning_level = self.determine_warning_level(current_time) if self.measuring else 0
 
     # create TailgatingStatus
-    # TODO: add duration (in ms) + cereal field
+    # TODO: add duration (in ms) + cereal field ???
     return {
         "isTailgating": bool(tailgating),
         "startTime": int(self.start_time),
         "warningLevel": int(warning_level)
     }
 
-  # TODO: this check could be removed when duration is used? (I think)
-  def currently_measuring(self) -> bool:
-    return self.start_time > 0
-
   def start_measurement(self, mono_time: int) -> None:
+    self.measuring = True
     self.start_time = mono_time
 
   def stop_measurement(self) -> None:
+    self.measuring = False
     self.start_time = 0
 
   # TODO: add as property?
   def determine_warning_level(self, mono_time: int) -> int:
-    if not self.currently_measuring():  # level 0
-      return 0
-
     ellapsed_time = mono_time - self.start_time
     if ellapsed_time >= LEVEL_3_THRESHOLD:
       return 3
