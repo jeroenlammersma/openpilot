@@ -5,10 +5,9 @@ from cereal import log, messaging
 from selfdrive.coachd.modules.base import CoachModule
 from selfdrive.coachd.modules.tailgating_detection import TailgatingStatus
 
-# key must match the name of the field in DrivingCoachState
-# module must be derived from base class CoachModule
-COACH_MODULES = {
-    # name of field: module
+# key must match name of coresponding field in DrivingCoachState schema
+COACH_MODULES: Dict[str, Type[CoachModule]] = {
+    # fieldname: module
     "tailgatingStatus": TailgatingStatus,
 }
 
@@ -17,10 +16,11 @@ class CoachD():
   def __init__(self, modules: Optional[Dict[str, Type[CoachModule]]] = None) -> None:
     # initialize modules
     if modules is None:
-      modules = dict(COACH_MODULES)
+      modules = COACH_MODULES
     self.modules = {field: module() for field, module in modules.items()}
     # add field names to activated_fields
     self.activated_fields = [field for field in modules.keys()]
+
   
   def is_field_activated(self, field: str) -> bool:
     return field in self.activated_fields
