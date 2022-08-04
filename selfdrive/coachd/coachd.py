@@ -21,7 +21,6 @@ class CoachD():
     # add field names to activated_fields
     self.activated_fields = [field for field in modules.keys()]
 
-  
   def is_field_activated(self, field: str) -> bool:
     return field in self.activated_fields
 
