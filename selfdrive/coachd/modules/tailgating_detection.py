@@ -30,7 +30,6 @@ def is_tailgating(thw: float, v_ego: float) -> bool:
 
 class TailgatingStatus(CoachModule):
   def __init__(self) -> None:
-    # TODO: add properties ???
     self.measuring = False
     self.start_time = 0
     self.v_ego = 0.
@@ -58,7 +57,8 @@ class TailgatingStatus(CoachModule):
       self.stop_measurement()
 
     # determine warning level (0 when not measuring)
-    warning_level = self.determine_warning_level(current_time) if self.measuring else 0
+    warning_level = self.determine_warning_level(
+        current_time) if self.measuring else 0
 
     # create TailgatingStatus
     # TODO: add duration (in ms) + cereal field ???
@@ -76,7 +76,6 @@ class TailgatingStatus(CoachModule):
     self.measuring = False
     self.start_time = 0
 
-  # TODO: add as property?
   def determine_warning_level(self, mono_time: int) -> int:
     ellapsed_time = mono_time - self.start_time
     if ellapsed_time >= LEVEL_3_THRESHOLD:

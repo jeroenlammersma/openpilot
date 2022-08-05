@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import unittest
 
+from cereal import messaging
 from selfdrive.coachd.modules.tailgating_detection import (LEVEL_1_THRESHOLD,
                                                            LEVEL_2_THRESHOLD,
                                                            LEVEL_3_THRESHOLD,
                                                            MINIMUM_VELOCITY,
                                                            THW_THRESHOLD,
                                                            TailgatingStatus,
+                                                           get_closest_lead,
                                                            is_tailgating)
 
 
@@ -15,7 +17,25 @@ class TestTailgatingDetection(unittest.TestCase):
     self.TS = TailgatingStatus()
 
   # closest lead
-  # TODO: add closest lead test(s)
+  def test_lead_one_is_closest(self) -> None:
+    """Verify lead one is closest when distance is lower than lead two"""
+    dat = messaging.new_message("radarState")
+    l1 = dat.radarState.leadOne
+    l2 = dat.radarState.leadTwo
+    l1.dRel = 4.2
+    l2.dRel = 4.201
+    self.assertEqual(l1, get_closest_lead(l1, l2),
+                     msg="\n%.1f is lower than %.3f" % (l1.dRel, l2.dRel))
+
+  def test_lead_two_is_closest(self) -> None:
+    """Verify lead two is closest when distance is lower than lead one"""
+    dat = messaging.new_message("radarState")
+    l1 = dat.radarState.leadOne
+    l2 = dat.radarState.leadTwo
+    l1.dRel = 4.201
+    l2.dRel = 4.2
+    self.assertEqual(l2, get_closest_lead(l1, l2),
+                     msg="\n%.1f is lower than %.3f" % (l2.dRel, l1.dRel))
 
   # is tailgating
   def test_is_tailgating_when_velocity_higher_than_minimum(self) -> None:

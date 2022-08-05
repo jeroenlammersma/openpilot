@@ -7,6 +7,11 @@ from selfdrive.coachd.coachd import COACH_MODULES, CoachD
 from selfdrive.coachd.modules.base import CoachModule
 
 
+class CustomModuleSimple(CoachModule):
+  def update(self, sm: messaging.SubMaster) -> None:
+    return
+
+
 class TestCoachD(unittest.TestCase):
 
   # capnp schema
@@ -50,16 +55,28 @@ class TestCoachD(unittest.TestCase):
       fail_msg = "%s signature differs from CoachModule" % (module.__name__)
       self.assertEqual(sig, signature(module.update).parameters, msg=fail_msg)
 
-  # constructor
-  def test_init_with_custom_module(self) -> None:
+  # init
+  def test_init_custom_module_added_to_modules(self) -> None:
     """Verify module passed in constructor is added to coachd modules"""
-    class CustomModule(CoachModule):
-      def update(self, sm: messaging.SubMaster) -> None:
-        return
-
-    CD = CoachD(modules={"custom_module": CustomModule})
+    CD = CoachD(modules={"custom_module": CustomModuleSimple})
     self.assertTrue("custom_module" in CD.modules.keys(),
-                    msg="Module passed to constructor not in modules")
+                    msg="Module passed to init must be added to modules")
+
+  # active fields
+  def test_field_is_active_when_passed_to_init(self) -> None:
+    """"Verify field is active when passed to constructor"""
+    CD = CoachD(modules={"custom_module": CustomModuleSimple})
+    self.assertTrue(CD.is_field_active("custom_module"),
+                    msg="Field of module passed to constructor must be active")
+
+  def test_field_is_not_active_when_not_passed_to_init(self) -> None:
+    """"Verify field is NOT active if NOT passed to constructor"""
+    CD = CoachD(modules={"custom_module": CustomModuleSimple})
+    self.assertFalse(CD.is_field_active("not_active"),
+                     msg="Field NOT passed in init must NOT be active")
+
+  # update
+  # TODO: update test(s)
 
 
 if __name__ == "__main__":

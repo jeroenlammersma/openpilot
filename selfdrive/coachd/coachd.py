@@ -18,11 +18,9 @@ class CoachD():
     if modules is None:
       modules = COACH_MODULES
     self.modules = {field: module() for field, module in modules.items()}
-    # add field names to activated_fields
-    self.activated_fields = [field for field in modules.keys()]
 
-  def is_field_activated(self, field: str) -> bool:
-    return field in self.activated_fields
+  def is_field_active(self, field: str) -> bool:
+    return field in self.modules.keys()
 
   def update(self, sm: messaging.SubMaster) -> log.DrivingCoachState:
     dat = messaging.new_message('drivingCoachState')
