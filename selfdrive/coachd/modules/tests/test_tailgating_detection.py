@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from typing import Optional
 import unittest
+from typing import Optional
 
 from cereal import log, messaging
 from selfdrive.coachd.modules.tailgating_detection import (LEVEL_1_THRESHOLD,
@@ -13,24 +13,41 @@ from selfdrive.coachd.modules.tailgating_detection import (LEVEL_1_THRESHOLD,
                                                            is_tailgating)
 
 
-def send_mock_car_state(v_ego: float = .0) -> None:
-  pm = messaging.PubMaster(['carState'])
-  dat = messaging.new_message('carState')
-  dat.carState.vEgo = v_ego
-  pm.send('carState', dat)
+def mock_tailgating_scenario(
+    sm: messaging.SubMaster,
+    ts: TailgatingStatus,
+    v_ego: float,
+    thw: float,
+    duration: int
+) -> log.DrivingCoachState.TailgatingStatus:
+
+  sm = messaging.SubMaster(['carState', 'radarState'])
+  send_mock_car_state(sm, v_ego)
+  send_mock_radar_state(sm, lead_one_thw=thw)
+  ts.update(sm)
+  send_mock_radar_state(sm, lead_one_thw=thw, log_mono_time=duration)
+  return ts.update(sm)
+
+
+def send_mock_car_state(sm: messaging.SubMaster, v_ego: float = .0) -> None:
+  cs = messaging.new_message('carState').carState
+  cs.vEgo = v_ego
+  sm.data['carState'] = cs
 
 
 def send_mock_radar_state(
+    sm: messaging.SubMaster,
     lead_one_d_rel: float = .0,
     lead_one_thw: float = .0,
     lead_two_d_rel: Optional[float] = None,
-    lead_two_thw: Optional[float] = None
+    lead_two_thw: Optional[float] = None,
+    log_mono_time: int = 0
 ) -> log.RadarState:
 
-  pm = messaging.PubMaster(['radarState'])
-  dat = get_mock_radar_state(
-      lead_one_d_rel, lead_one_thw, lead_two_d_rel, lead_two_thw)
-  pm.send('radarState', dat)
+  rs = get_mock_radar_state(
+      lead_one_d_rel, lead_one_thw, lead_two_d_rel, lead_two_thw).radarState
+  sm.data['radarState'] = rs
+  sm.logMonoTime['radarState'] = log_mono_time
 
 
 def get_mock_radar_state(
@@ -41,21 +58,10 @@ def get_mock_radar_state(
 ) -> log.RadarState:
 
   def get_mock_lead_data(d_rel: float, thw: float) -> log.RadarState.LeadData:
-    return {
-        "dRel": float(d_rel),
-        "yRel": .0,
-        "vRel": .0,
-        "vLead": .0,
-        "vLeadK": .0,
-        "aLeadK": .0,
-        "status": True,
-        "fcw": False,
-        "modelProb": .0,
-        "radar": True,
-        "aLeadTau": .0,
-        "thw": float(thw),
-        "ttc": .0
-    }
+    lead_data = log.RadarState.LeadData.new_message()
+    lead_data.dRel = d_rel
+    lead_data.thw = thw
+    return lead_data
 
   if not lead_two_d_rel:
     lead_two_d_rel = lead_one_d_rel
@@ -71,6 +77,15 @@ def get_mock_radar_state(
 class TestTailgatingDetection(unittest.TestCase):
   def setUp(self) -> None:
     self.TS = TailgatingStatus()
+    self.SM = messaging.SubMaster(['carState', 'radarState'])
+
+  # capnp schema
+  def test_TailgatingStatus_struct_defined(self) -> None:
+    """Ensure TailgatingStatus struct is defined in capnp schema"""
+    s = "TailgatingStatus"
+    structs = [
+        n.name for n in log.DrivingCoachState.schema.get_proto().nestedNodes]
+    self.assertTrue(s in structs, msg="%s struct not in schema" % (s))
 
   # closest lead
   def test_lead_one_is_closest(self) -> None:
@@ -121,32 +136,82 @@ class TestTailgatingDetection(unittest.TestCase):
         tailgating, msg="Must be tailgating when thw lower than threshold")
 
   # update
-  # TODO: add update test(s)
-  # TODO: def test_warning_level_is_zero_on_threshold_when_not_measuring(self) -> None:
+  def test_update_returns_TailgatingStatus(self) -> None:
+    """Verify update method returns a TailgatingStatus object"""
+    ts_keys = log.DrivingCoachState.TailgatingStatus.new_message().to_dict(verbose=True).keys()
+    returned_keys = self.TS.update(self.SM).keys()
+    self.assertEqual(ts_keys, returned_keys,
+                     msg="Return object differs from TailgatingStatus")
+
+  def test_active_is_true_when_updating(self) -> None:
+    """Verify active is set to True when new tailgating status is requested"""
+    tailgating_status = self.TS.update(self.SM)
+    self.assertTrue(tailgating_status['active'],
+                    msg="active must be set to true when updating")
+
+  def test_update_returns_correct_values_when_tailgating_duration_long_enough(self) -> None:
+    """Verify update method returns expected tailgatingStatus when tailgating for duration of level 2 threshold"""
+    expected_status = {'active': True, 'isTailgating': True,
+                       'duration': LEVEL_2_THRESHOLD, 'warningLevel': 2}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TS, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_2_THRESHOLD)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Update return differs from expected tailgatingStatus")
+
+  def test_update_returns_correct_values_when_tailgating_duration_not_long_enough(self) -> None:
+    """Verify update method returns expected tailgatingStatus when tailgating for time just below level 1 threshold"""
+    expected_status = {'active': True, 'isTailgating': True,
+                       'duration': LEVEL_1_THRESHOLD - 1, 'warningLevel': 0}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TS, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_1_THRESHOLD - 1)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Update return differs from expected tailgatingStatus")
+
+  def test_update_returns_correct_values_when_not_tailgating_thw(self) -> None:
+    """Verify update method returns expected tailgatingStatus when NOT tailgating due to thw being too high"""
+    expected_status = {'active': True, 'isTailgating': False,
+                       'duration': 0, 'warningLevel': 0}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TS, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD, duration=LEVEL_3_THRESHOLD)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Update return differs from expected tailgatingStatus")
+
+  def test_update_returns_correct_values_when_not_tailgating_velocity(self) -> None:
+    """Verify update method returns expected tailgatingStatus when NOT tailgating due to velocity being too low"""
+    expected_status = {'active': True, 'isTailgating': False,
+                       'duration': 0, 'warningLevel': 0}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TS, v_ego=MINIMUM_VELOCITY - 0.1, thw=THW_THRESHOLD - 0.5, duration=LEVEL_3_THRESHOLD)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Update return differs from expected tailgatingStatus")
 
   # start measurement
   def test_is_measuring_when_measurement_started(self) -> None:
+    """"Verify tailgating is being measured when measurement started"""
     self.TS.start_measurement(0)
     self.assertTrue(self.TS.measuring,
                     msg="Must be measuring when measurement started")
 
   def test_start_time_set_to_mono_time_when_measurement_started(self) -> None:
+    """Verify start time is set to given mono time when measurement started"""
     self.TS.start_measurement((mono_time := 42))
     self.assertEqual(mono_time, self.TS.start_time,
-                     msg="start_time must be set to value of mono_time when measurement started")
+                     msg="start time must be set to value of mono time when measurement started")
 
   # stop measurement
   def test_not_measuring_when_measurement_stopped(self) -> None:
+    """"Verify tailgating is stopped being measured when measurement stopped"""
     self.TS.start_measurement(0)
     self.TS.stop_measurement()
     self.assertFalse(self.TS.measuring,
                      msg="Must NOT be measuring when measurement stopped")
 
   def test_start_time_reset_to_zero_when_measurement_stopped(self) -> None:
+    """Verify start time is reset to zero when measurement stopped"""
     self.TS.start_measurement(42)
     self.TS.stop_measurement()
     self.assertEqual(0, self.TS.start_time,
-                     msg="start_time must be reset to zero when measurement stopped")
+                     msg="start time must be reset to 0 when measurement stopped")
 
   # determine warning level
   def test_warning_level_is_zero_just_below_threshold(self) -> None:
