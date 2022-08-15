@@ -228,8 +228,11 @@ void NvgWindow::updateState(const UIState &s) {
   }
 
   // driving coach
-  auto warningLevel = sm["drivingCoachState"].getDrivingCoachState().getTailgatingStatus().getWarningLevel();
-  setProperty("showTailgatingWarning", warningLevel != 0);
+  // show tailgating warning icon only when module is active
+  auto TS = sm["drivingCoachState"].getDrivingCoachState().getTailgatingStatus();
+  if (TS.getActive()) {
+    setProperty("showTailgatingWarning", TS.getWarningLevel() != 0);
+  }
 }
 
 void NvgWindow::drawHud(QPainter &p) {

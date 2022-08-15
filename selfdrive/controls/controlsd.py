@@ -402,7 +402,9 @@ class Controls:
       and self.CP.openpilotLongitudinalControl and CS.vEgo < 0.3:
       self.events.add(EventName.noTarget)
     
-    if (tailgating_level := self.sm['drivingCoachState'].tailgatingStatus.warningLevel) != 0:
+    # create tailgating events only when module is active
+    tailgating_status = self.sm['drivingCoachState'].tailgatingStatus
+    if tailgating_status.active and (tailgating_level := tailgating_status.warningLevel) != 0:
       switch = {1: EventName.tailgating,
                 2: EventName.promptTailgating,
                 3: EventName.persistentTailgating}
