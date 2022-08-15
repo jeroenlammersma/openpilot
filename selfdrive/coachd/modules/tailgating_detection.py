@@ -5,9 +5,9 @@ THW_THRESHOLD = 1.  # in m, ego is tailgating when THW is below threshold
 MINIMUM_VELOCITY = 5.  # in m/s, ego is not tailgating when velocity is below minimal
 
 # all in s
-TIME_TILL_LEVEL_1 = 5
-TIME_TILL_LEVEL_2 = 10
-TIME_TILL_LEVEL_3 = 20
+TIME_TILL_LEVEL_1 = 2
+TIME_TILL_LEVEL_2 = 4
+TIME_TILL_LEVEL_3 = 6
 
 # all in ns
 LEVEL_1_THRESHOLD = int(TIME_TILL_LEVEL_1 * 1e+9)
@@ -31,44 +31,50 @@ def is_tailgating(thw: float, v_ego: float) -> bool:
 class TailgatingStatus(CoachModule):
   def __init__(self) -> None:
     self.measuring = False
-    self.v_ego = 0.
-
     self.tailgating = False
     self.start_time = 0
+    self.duration = 0
     self.warning_level = 0
 
   def update(self, sm: messaging.SubMaster) -> log.DrivingCoachState.TailgatingStatus:
-    if sm.updated['radarState']:
-      radar_state = sm['radarState']
-      self.v_ego = sm['carState'].vEgo
+    # if not sm.updated['radarState']:
+    #   return self.create_tailgating_status()
 
-      current_time = sm.logMonoTime['radarState']
+    radar_state = sm['radarState']
+    current_time = sm.logMonoTime['radarState']
+    v_ego = sm['carState'].vEgo
 
-      # get closest lead
-      lead_one = radar_state.leadOne
-      lead_two = radar_state.leadTwo
-      closest_lead = get_closest_lead(lead_one, lead_two)
+    # get closest lead
+    lead_one = radar_state.leadOne
+    lead_two = radar_state.leadTwo
+    closest_lead = get_closest_lead(lead_one, lead_two)
 
-      # determine if ego is tailgating
-      self.tailgating = is_tailgating(closest_lead.thw, self.v_ego)
+    # determine if ego is tailgating
+    self.tailgating = is_tailgating(closest_lead.thw, v_ego)
 
-      # start measurement if tailgating and not measuring yet
-      if self.tailgating and not self.measuring:
-        self.start_measurement(current_time)
-      # stop measurement if not tailgating and still measuring
-      elif not self.tailgating and self.measuring:
-        self.stop_measurement()
+    # start measurement if tailgating and not measuring yet
+    if self.tailgating and not self.measuring:
+      self.start_measurement(current_time)
+    # stop measurement if not tailgating and still measuring
+    elif not self.tailgating and self.measuring:
+      self.stop_measurement()
 
-      # determine warning level (0 when not measuring)
-      self.warning_level = self.determine_warning_level(
-          current_time) if self.measuring else 0
+    # calculate duration
+    self.duration = current_time - self.start_time if self.measuring else 0
 
-    # create TailgatingStatus
+    # determine warning level (0 when not measuring)
+    self.warning_level = self.determine_warning_level(
+        current_time) if self.measuring else 0
+
+    return self.create_tailgating_status()
+
+  def create_tailgating_status(self) -> log.DrivingCoachState.TailgatingStatus:
     # TODO: add duration (in ms) + cereal field ???
     return {
         "active": True,
         "isTailgating": bool(self.tailgating),
         "startTime": int(self.start_time),
+        "duration": int(self.duration),
         "warningLevel": int(self.warning_level)
     }
 

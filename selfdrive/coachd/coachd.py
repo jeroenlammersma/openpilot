@@ -51,6 +51,12 @@ def coachd_thread(sm: Union[messaging.SubMaster, None] = None,
 
   while True:
     sm.update()
+    
+    # do not publish new message if radarState not updated
+    # (if check get's in your way, move it to TailgatingStatus.update(sm) method)
+    if not sm.updated['radarState']:
+      continue
+
     dat = CD.update(sm)
     pm.send('drivingCoachState', dat)
 
