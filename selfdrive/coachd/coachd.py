@@ -3,12 +3,12 @@ from typing import Dict, Optional, Type, Union
 
 from cereal import log, messaging
 from selfdrive.coachd.modules.base import CoachModule
-from selfdrive.coachd.modules.tailgating_detection import TailgatingStatus
+from selfdrive.coachd.modules.tailgating_detection import TailgatingDetection
 
 # key must match name of coresponding field in DrivingCoachState schema
 COACH_MODULES: Dict[str, Type[CoachModule]] = {
     # fieldname: module
-    "tailgatingStatus": TailgatingStatus,
+    "tailgatingStatus": TailgatingDetection,
 }
 
 
@@ -51,9 +51,9 @@ def coachd_thread(sm: Union[messaging.SubMaster, None] = None,
 
   while True:
     sm.update()
-    
+
     # do not publish new message if radarState not updated
-    # (if check get's in your way, move it to TailgatingStatus.update(sm) method)
+    # (if check get's in your way, move this to TailgatingDetection.update(sm) method)
     if not sm.updated['radarState']:
       continue
 

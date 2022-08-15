@@ -28,7 +28,7 @@ def is_tailgating(thw: float, v_ego: float) -> bool:
   return thw != 0 and thw < THW_THRESHOLD and v_ego >= MINIMUM_VELOCITY
 
 
-class TailgatingStatus(CoachModule):
+class TailgatingDetection(CoachModule):
   def __init__(self) -> None:
     self.measuring = False
     self.tailgating = False
