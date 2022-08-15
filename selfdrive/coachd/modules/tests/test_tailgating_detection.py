@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+from typing import Optional
 import unittest
 
-from cereal import messaging
+from cereal import log, messaging
 from selfdrive.coachd.modules.tailgating_detection import (LEVEL_1_THRESHOLD,
                                                            LEVEL_2_THRESHOLD,
                                                            LEVEL_3_THRESHOLD,
@@ -12,6 +13,61 @@ from selfdrive.coachd.modules.tailgating_detection import (LEVEL_1_THRESHOLD,
                                                            is_tailgating)
 
 
+def send_mock_car_state(v_ego: float = .0) -> None:
+  pm = messaging.PubMaster(['carState'])
+  dat = messaging.new_message('carState')
+  dat.carState.vEgo = v_ego
+  pm.send('carState', dat)
+
+
+def send_mock_radar_state(
+    lead_one_d_rel: float = .0,
+    lead_one_thw: float = .0,
+    lead_two_d_rel: Optional[float] = None,
+    lead_two_thw: Optional[float] = None
+) -> log.RadarState:
+
+  pm = messaging.PubMaster(['radarState'])
+  dat = get_mock_radar_state(
+      lead_one_d_rel, lead_one_thw, lead_two_d_rel, lead_two_thw)
+  pm.send('radarState', dat)
+
+
+def get_mock_radar_state(
+    lead_one_d_rel: float = .0,
+    lead_one_thw: float = .0,
+    lead_two_d_rel: Optional[float] = None,
+    lead_two_thw: Optional[float] = None
+) -> log.RadarState:
+
+  def get_mock_lead_data(d_rel: float, thw: float) -> log.RadarState.LeadData:
+    return {
+        "dRel": float(d_rel),
+        "yRel": .0,
+        "vRel": .0,
+        "vLead": .0,
+        "vLeadK": .0,
+        "aLeadK": .0,
+        "status": True,
+        "fcw": False,
+        "modelProb": .0,
+        "radar": True,
+        "aLeadTau": .0,
+        "thw": float(thw),
+        "ttc": .0
+    }
+
+  if not lead_two_d_rel:
+    lead_two_d_rel = lead_one_d_rel
+  if not lead_two_thw:
+    lead_two_thw = lead_one_thw
+
+  dat = messaging.new_message('radarState')
+  dat.radarState.leadOne = get_mock_lead_data(lead_one_d_rel, lead_one_thw)
+  dat.radarState.leadTwo = get_mock_lead_data(lead_two_d_rel, lead_two_thw)
+  return dat
+
+
 class TestTailgatingDetection(unittest.TestCase):
   def setUp(self) -> None:
     self.TS = TailgatingStatus()
@@ -19,23 +75,19 @@ class TestTailgatingDetection(unittest.TestCase):
   # closest lead
   def test_lead_one_is_closest(self) -> None:
     """Verify lead one is closest when distance is lower than lead two"""
-    dat = messaging.new_message("radarState")
+    dat = get_mock_radar_state(lead_one_d_rel=4.2, lead_two_d_rel=4.201)
     l1 = dat.radarState.leadOne
     l2 = dat.radarState.leadTwo
-    l1.dRel = 4.2
-    l2.dRel = 4.201
     self.assertEqual(l1, get_closest_lead(l1, l2),
-                     msg="\n%.1f is lower than %.3f" % (l1.dRel, l2.dRel))
+                     msg="\nLead one must be closest (leadOne.dRel=%.3f, leadTwo.dRel=%.3f)" % (l1.dRel, l2.dRel))
 
   def test_lead_two_is_closest(self) -> None:
     """Verify lead two is closest when distance is lower than lead one"""
-    dat = messaging.new_message("radarState")
+    dat = get_mock_radar_state(lead_one_d_rel=4.201, lead_two_d_rel=4.2)
     l1 = dat.radarState.leadOne
     l2 = dat.radarState.leadTwo
-    l1.dRel = 4.201
-    l2.dRel = 4.2
     self.assertEqual(l2, get_closest_lead(l1, l2),
-                     msg="\n%.1f is lower than %.3f" % (l2.dRel, l1.dRel))
+                     msg="\nLead two must be closest (leadOne.dRel=%.3f, leadTwo.dRel=%.3f)" % (l1.dRel, l2.dRel))
 
   # is tailgating
   def test_is_tailgating_when_velocity_higher_than_minimum(self) -> None:
