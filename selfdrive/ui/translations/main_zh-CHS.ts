@@ -496,20 +496,20 @@ location set</source>
         <translation>mph</translation>
     </message>
     <message>
-        <location filename="../qt/onroad.cc" line="285"/>
         <location filename="../qt/onroad.cc" line="288"/>
+        <location filename="../qt/onroad.cc" line="291"/>
         <source>MAX</source>
         <translation>最高定速</translation>
     </message>
     <message>
-        <location filename="../qt/onroad.cc" line="332"/>
         <location filename="../qt/onroad.cc" line="335"/>
+        <location filename="../qt/onroad.cc" line="338"/>
         <source>SPEED</source>
         <translation>SPEED</translation>
     </message>
     <message>
-        <location filename="../qt/onroad.cc" line="338"/>
         <location filename="../qt/onroad.cc" line="341"/>
+        <location filename="../qt/onroad.cc" line="344"/>
         <source>LIMIT</source>
         <translation>LIMIT</translation>
     </message>
