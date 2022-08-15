@@ -5,9 +5,9 @@ THW_THRESHOLD = 1.  # in m, ego is tailgating when THW is below threshold
 MINIMUM_VELOCITY = 5.  # in m/s, ego is not tailgating when velocity is below minimal
 
 # all in s
-TIME_TILL_LEVEL_1 = 2
-TIME_TILL_LEVEL_2 = 4
-TIME_TILL_LEVEL_3 = 6
+TIME_TILL_LEVEL_1 = 5
+TIME_TILL_LEVEL_2 = 10
+TIME_TILL_LEVEL_3 = 20
 
 # all in ns
 LEVEL_1_THRESHOLD = int(TIME_TILL_LEVEL_1 * 1e+9)
@@ -59,7 +59,7 @@ class TailgatingStatus(CoachModule):
     elif not self.tailgating and self.measuring:
       self.stop_measurement()
 
-    # calculate duration
+    # calculate duration (0 when not measuring)
     self.duration = current_time - self.start_time if self.measuring else 0
 
     # determine warning level (0 when not measuring)
@@ -69,11 +69,9 @@ class TailgatingStatus(CoachModule):
     return self.create_tailgating_status()
 
   def create_tailgating_status(self) -> log.DrivingCoachState.TailgatingStatus:
-    # TODO: add duration (in ms) + cereal field ???
     return {
         "active": True,
         "isTailgating": bool(self.tailgating),
-        "startTime": int(self.start_time),
         "duration": int(self.duration),
         "warningLevel": int(self.warning_level)
     }
