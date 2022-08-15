@@ -32,6 +32,7 @@ def mock_tailgating_scenario(
 def send_mock_car_state(sm: messaging.SubMaster, v_ego: float = .0) -> None:
   cs = messaging.new_message('carState').carState
   cs.vEgo = v_ego
+  sm.updated['carState'] = True
   sm.data['carState'] = cs
 
 
@@ -46,6 +47,7 @@ def send_mock_radar_state(
 
   rs = get_mock_radar_state(
       lead_one_d_rel, lead_one_thw, lead_two_d_rel, lead_two_thw).radarState
+  sm.updated['radarState'] = True
   sm.data['radarState'] = rs
   sm.logMonoTime['radarState'] = log_mono_time
 
