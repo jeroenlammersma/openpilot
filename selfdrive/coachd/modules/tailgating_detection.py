@@ -66,7 +66,7 @@ class TailgatingStatus(CoachModule):
     # create TailgatingStatus
     # TODO: add duration (in ms) + cereal field ???
     return {
-        # "active": True,
+        "active": True,
         "isTailgating": bool(self.tailgating),
         "startTime": int(self.start_time),
         "warningLevel": int(self.warning_level)
