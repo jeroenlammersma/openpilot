@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import Dict, Optional, Type, Union
+from typing import Dict, List, Optional, Type, Union
 
 from cereal import log, messaging
 from selfdrive.coachd.modules.base import CoachModule
@@ -11,13 +11,25 @@ COACH_MODULES: Dict[str, Type[CoachModule]] = {
     "tailgatingStatus": TailgatingDetection,
 }
 
+# services that need to be validated to make a DrivingCoachState message valid
+VALIDATED_SERVICES = ['carState', 'radarState']
+
 
 class CoachD():
-  def __init__(self, modules: Optional[Dict[str, Type[CoachModule]]] = None) -> None:
+  def __init__(self,
+               modules: Optional[Dict[str, Type[CoachModule]]] = None,
+               validated_services: Optional[List[str]] = None
+               ) -> None:
+
     # initialize modules
     if modules is None:
       modules = COACH_MODULES
     self.modules = {field: module() for field, module in modules.items()}
+
+    # set services that need validation
+    if validated_services is None:
+      validated_services = VALIDATED_SERVICES
+    self.validated_services = validated_services
 
   def is_field_active(self, field: str) -> bool:
     return field in self.modules.keys()
@@ -27,7 +39,7 @@ class CoachD():
     drivingCoachState = dat.drivingCoachState
 
     # *** validate services ***
-    dat.valid = sm.all_checks(service_list=['carState', 'radarState'])
+    dat.valid = sm.all_checks(service_list=self.validated_services)
 
     # *** fill drivingCoachState fields ***
     for field, module in self.modules.items():

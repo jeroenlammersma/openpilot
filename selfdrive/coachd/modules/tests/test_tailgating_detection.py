@@ -13,13 +13,12 @@ from selfdrive.coachd.modules.tailgating_detection import (LEVEL_1_THRESHOLD,
                                                            is_tailgating)
 
 
-def mock_tailgating_scenario(
-    sm: messaging.SubMaster,
-    td: TailgatingDetection,
-    v_ego: float,
-    thw: float,
-    duration: int
-) -> log.DrivingCoachState.TailgatingStatus:
+def mock_tailgating_scenario(sm: messaging.SubMaster,
+                             td: TailgatingDetection,
+                             v_ego: float,
+                             thw: float,
+                             duration: int
+                             ) -> log.DrivingCoachState.TailgatingStatus:
 
   sm = messaging.SubMaster(['carState', 'radarState'])
   send_mock_car_state(sm, v_ego)
@@ -36,14 +35,13 @@ def send_mock_car_state(sm: messaging.SubMaster, v_ego: float = .0) -> None:
   sm.data['carState'] = cs
 
 
-def send_mock_radar_state(
-    sm: messaging.SubMaster,
-    lead_one_d_rel: float = .0,
-    lead_one_thw: float = .0,
-    lead_two_d_rel: Optional[float] = None,
-    lead_two_thw: Optional[float] = None,
-    log_mono_time: int = 0
-) -> log.RadarState:
+def send_mock_radar_state(sm: messaging.SubMaster,
+                          lead_one_d_rel: float = .0,
+                          lead_one_thw: float = .0,
+                          lead_two_d_rel: Optional[float] = None,
+                          lead_two_thw: Optional[float] = None,
+                          log_mono_time: int = 0
+                          ) -> log.RadarState:
 
   rs = get_mock_radar_state(
       lead_one_d_rel, lead_one_thw, lead_two_d_rel, lead_two_thw).radarState
@@ -52,12 +50,11 @@ def send_mock_radar_state(
   sm.logMonoTime['radarState'] = log_mono_time
 
 
-def get_mock_radar_state(
-    lead_one_d_rel: float = .0,
-    lead_one_thw: float = .0,
-    lead_two_d_rel: Optional[float] = None,
-    lead_two_thw: Optional[float] = None
-) -> log.RadarState:
+def get_mock_radar_state(lead_one_d_rel: float = .0,
+                         lead_one_thw: float = .0,
+                         lead_two_d_rel: Optional[float] = None,
+                         lead_two_thw: Optional[float] = None
+                         ) -> log.RadarState:
 
   def get_mock_lead_data(d_rel: float, thw: float) -> log.RadarState.LeadData:
     lead_data = log.RadarState.LeadData.new_message()
