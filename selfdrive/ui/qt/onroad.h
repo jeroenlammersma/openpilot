@@ -42,6 +42,9 @@ class NvgWindow : public CameraViewWidget {
   Q_PROPERTY(bool rightHandDM MEMBER rightHandDM);
   Q_PROPERTY(int status MEMBER status);
 
+  // driving coach
+  Q_PROPERTY(bool showTailgatingWarning MEMBER showTailgatingWarning);
+
 public:
   explicit NvgWindow(VisionStreamType type, QWidget* parent = 0);
   void updateState(const UIState &s);
@@ -68,6 +71,11 @@ private:
   bool has_eu_speed_limit = false;
   bool v_ego_cluster_seen = false;
   int status = STATUS_DISENGAGED;
+
+  // driving coach
+  QPixmap tailgating_img;
+  const int tailgating_img_size = img_size / 1.5 * 1.65;
+  bool showTailgatingWarning = false;
 
 protected:
   void paintGL() override;
