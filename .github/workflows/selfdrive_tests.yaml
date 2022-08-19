@@ -360,10 +360,12 @@ jobs:
     - name: Build Docker image
       run: eval "$BUILD"
     - name: Run replay
+      env:
+        IGNORED_FIELDS: "radarState.leadOne.thw radarState.leadOne.ttc radarState.leadTwo.thw radarState.leadTwo.ttc"
       run: |
         ${{ env.RUN }} "scons -j$(nproc) && \
-                        FILEREADER_CACHE=1 CI=1 coverage run selfdrive/test/process_replay/test_processes.py -j$(nproc) && \
-                        coverage xml"
+                        FILEREADER_CACHE=1 CI=1 coverage run selfdrive/test/process_replay/test_processes.py \
+                        --ignore-fields $IGNORED_FIELDS -j$(nproc) && coverage xml"
     - name: Print diff
       if: always()
       run: cat selfdrive/test/process_replay/diff.txt
