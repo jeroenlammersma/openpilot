@@ -1,4 +1,4 @@
-FROM ghcr.io/commaai/openpilot-base:latest
+FROM ghcr.io/jeroenlammersma/openpilot-base:latest
 
 ENV PYTHONUNBUFFERED 1
 

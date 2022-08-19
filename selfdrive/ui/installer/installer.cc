@@ -21,10 +21,10 @@ std::string get_str(std::string const s) {
 }
 
 // Leave some extra space for the fork installer
-const std::string GIT_URL = get_str("https://github.com/commaai/openpilot.git" "?                                                                ");
+const std::string GIT_URL = get_str("https://github.com/jeroenlammersma/openpilot.git" "?                                                                ");
 const std::string BRANCH_STR = get_str(BRANCH "?                                                                ");
 
-#define GIT_SSH_URL "git@github.com:commaai/openpilot.git"
+#define GIT_SSH_URL "git@github.com:jeroenlammersma/openpilot.git"
 #define CONTINUE_PATH "/data/continue.sh"
 
 const QString CACHE_PATH = "/data/openpilot.cache";
