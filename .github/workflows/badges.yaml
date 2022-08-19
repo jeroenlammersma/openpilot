@@ -6,7 +6,7 @@ on:
 
 env:
   BASE_IMAGE: openpilot-base
-  DOCKER_REGISTRY: ghcr.io/commaai
+  DOCKER_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
   BUILD: |
       docker pull $(grep -iohP '(?<=^from)\s+\S+' Dockerfile.openpilot_base) || true
@@ -18,7 +18,7 @@ jobs:
   badges:
     name: create badges
     runs-on: ubuntu-20.04
-    if: github.repository == 'commaai/openpilot'
+    if: github.repository == '${{ github.repository_owner }}/openpilot'
     steps:
     - uses: actions/checkout@v3
       with:

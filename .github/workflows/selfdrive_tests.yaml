@@ -8,7 +8,7 @@ on:
 env:
   BASE_IMAGE: openpilot-base
   CL_BASE_IMAGE: openpilot-base-cl
-  DOCKER_REGISTRY: ghcr.io/commaai
+  DOCKER_REGISTRY: ghcr.io/${{ github.repository_owner }}
   AZURE_TOKEN: ${{ secrets.AZURE_COMMADATACI_OPENPILOTCI_TOKEN }}
 
   DOCKER_LOGIN: docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
@@ -42,7 +42,7 @@ jobs:
     - name: Pull LFS
       run: git lfs pull
     - name: Check submodules
-      if: github.ref == 'refs/heads/master' && github.repository == 'commaai/openpilot'
+      if: github.ref == 'refs/heads/driving-coach' && github.repository == '${{ github.repository_owner }}/openpilot'
       run: release/check-submodules.sh
     - name: Cache scons
       id: scons-cache
@@ -91,7 +91,7 @@ jobs:
       # TODO: Change the version to the released version when https://github.com/actions/cache/pull/489 (or 571) is merged.
       uses: actions/cache@03e00da99d75a2204924908e1cca7902cafce66b
       env:
-        CACHE_SKIP_SAVE: ${{ github.ref != 'refs/heads/master' || github.repository != 'commaai/openpilot' }}
+        CACHE_SKIP_SAVE: ${{ github.ref != 'refs/heads/driving-coach' || github.repository != '${{ github.repository_owner }}/openpilot' }}
       with:
         path: /tmp/scons_cache
         key: scons-${{ hashFiles('.github/workflows/selfdrive_tests.yaml') }}-${{ steps.date.outputs.time }}
@@ -195,7 +195,7 @@ jobs:
     - name: Build openpilot
       run: docker run --shm-size 1G --rm -v $PWD:/tmp/openpilot -e PYTHONPATH=/tmp/openpilot $DOCKER_REGISTRY/$IMAGE_NAME /bin/sh -c "cd /tmp/openpilot && USE_WEBCAM=1 scons -j$(nproc)"
     - name: Push to container registry
-      if: github.ref == 'refs/heads/master' && github.repository == 'commaai/openpilot'
+      if: github.ref == 'refs/heads/driving-coach' && github.repository == '${{ github.repository_owner }}/openpilot'
       run: |
         $DOCKER_LOGIN
         docker push $DOCKER_REGISTRY/$IMAGE_NAME:latest
@@ -204,7 +204,7 @@ jobs:
     name: docker push
     runs-on: ubuntu-20.04
     timeout-minutes: 50
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request' && github.repository == 'commaai/openpilot'
+    if: github.ref == 'refs/heads/driving-coach' && github.event_name != 'pull_request' && github.repository == '${{ github.repository_owner }}/openpilot'
     needs: static_analysis # hack to ensure slow tests run first since this and static_analysis are fast
     steps:
     - uses: actions/checkout@v3
@@ -292,7 +292,7 @@ jobs:
       # TODO: Change the version to the released version when https://github.com/actions/cache/pull/489 (or 571) is merged.
       uses: actions/cache@03e00da99d75a2204924908e1cca7902cafce66b
       env:
-        CACHE_SKIP_SAVE: ${{ github.ref != 'refs/heads/master' || github.repository != 'commaai/openpilot' }}
+        CACHE_SKIP_SAVE: ${{ github.ref != 'refs/heads/driving-coach' || github.repository != '${{ github.repository_owner }}/openpilot' }}
       with:
         path: /tmp/scons_cache
         key: scons-${{ hashFiles('.github/workflows/selfdrive_tests.yaml') }}-${{ steps.date.outputs.time }}
@@ -374,7 +374,7 @@ jobs:
         name: process_replay_diff.txt
         path: selfdrive/test/process_replay/diff.txt
     - name: Upload reference logs
-      if: ${{ failure() && github.event_name == 'pull_request' && github.repository == 'commaai/openpilot' && env.AZURE_TOKEN != '' }}
+      if: ${{ failure() && github.event_name == 'pull_request' && github.repository == '${{ github.repository_owner }}/openpilot' && env.AZURE_TOKEN != '' }}
       run: |
         ${{ env.RUN }} "scons -j$(nproc) && \
                         CI=1 AZURE_TOKEN='$AZURE_TOKEN' python selfdrive/test/process_replay/test_processes.py -j$(nproc) --upload-only"
@@ -515,7 +515,7 @@ jobs:
         docker pull $DOCKER_REGISTRY/openpilot-docs:latest || true
         DOCKER_BUILDKIT=1 docker build --cache-from $DOCKER_REGISTRY/openpilot-docs:latest -t $DOCKER_REGISTRY/openpilot-docs:latest -f docs/docker/Dockerfile .
     - name: Push docker container
-      if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request' && github.repository == 'commaai/openpilot'
+      if: github.ref == 'refs/heads/driving-coach' && github.event_name != 'pull_request' && github.repository == '${{ github.repository_owner }}/openpilot'
       run: |
         $DOCKER_LOGIN
         docker push $DOCKER_REGISTRY/openpilot-docs:latest
