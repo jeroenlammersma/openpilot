@@ -34,7 +34,16 @@ class TailgatingDetection(CoachModule):
     self.tailgating = False
     self.start_time = 0
     self.duration = 0
-    self.warning_level = 0
+
+  @property
+  def warning_level(self) -> int:
+    if self.duration >= LEVEL_3_THRESHOLD:
+      return 3
+    if self.duration >= LEVEL_2_THRESHOLD:
+      return 2
+    if self.duration >= LEVEL_1_THRESHOLD:
+      return 1
+    return 0
 
   def update(self, sm: messaging.SubMaster) -> log.DrivingCoachState.TailgatingStatus:
     # if not sm.updated['radarState']:
@@ -62,10 +71,6 @@ class TailgatingDetection(CoachModule):
     # calculate duration (0 when not measuring)
     self.duration = current_time - self.start_time if self.measuring else 0
 
-    # determine warning level (0 when not measuring)
-    self.warning_level = self.determine_warning_level(
-        current_time) if self.measuring else 0
-
     return self.create_tailgating_status()
 
   def create_tailgating_status(self) -> log.DrivingCoachState.TailgatingStatus:
@@ -83,13 +88,3 @@ class TailgatingDetection(CoachModule):
   def stop_measurement(self) -> None:
     self.measuring = False
     self.start_time = 0
-
-  def determine_warning_level(self, mono_time: int) -> int:
-    ellapsed_time = mono_time - self.start_time
-    if ellapsed_time >= LEVEL_3_THRESHOLD:
-      return 3
-    if ellapsed_time >= LEVEL_2_THRESHOLD:
-      return 2
-    if ellapsed_time >= LEVEL_1_THRESHOLD:
-      return 1
-    return 0

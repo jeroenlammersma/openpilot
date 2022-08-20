@@ -148,24 +148,6 @@ class TestTailgatingDetection(unittest.TestCase):
     self.assertTrue(tailgating_status['active'],
                     msg="active must be set to true when updating")
 
-  def test_update_returns_correct_values_when_tailgating_duration_long_enough(self) -> None:
-    """Verify update method returns expected tailgatingStatus when tailgating for duration of level 2 threshold"""
-    expected_status = {'active': True, 'isTailgating': True,
-                       'duration': LEVEL_2_THRESHOLD, 'warningLevel': 2}
-    actual_status = mock_tailgating_scenario(
-        self.SM, self.TD, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_2_THRESHOLD)
-    self.assertEqual(expected_status, actual_status,
-                     msg="Update return differs from expected tailgatingStatus")
-
-  def test_update_returns_correct_values_when_tailgating_duration_not_long_enough(self) -> None:
-    """Verify update method returns expected tailgatingStatus when tailgating for time just below level 1 threshold"""
-    expected_status = {'active': True, 'isTailgating': True,
-                       'duration': LEVEL_1_THRESHOLD - 1, 'warningLevel': 0}
-    actual_status = mock_tailgating_scenario(
-        self.SM, self.TD, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_1_THRESHOLD - 1)
-    self.assertEqual(expected_status, actual_status,
-                     msg="Update return differs from expected tailgatingStatus")
-
   def test_update_returns_correct_values_when_not_tailgating_thw(self) -> None:
     """Verify update method returns expected tailgatingStatus when NOT tailgating due to thw being too high"""
     expected_status = {'active': True, 'isTailgating': False,
@@ -183,6 +165,60 @@ class TestTailgatingDetection(unittest.TestCase):
         self.SM, self.TD, v_ego=MINIMUM_VELOCITY - 0.1, thw=THW_THRESHOLD - 0.5, duration=LEVEL_3_THRESHOLD)
     self.assertEqual(expected_status, actual_status,
                      msg="Update return differs from expected tailgatingStatus")
+
+  def test_warning_level_is_zero_just_below_threshold(self) -> None:
+    """Verify warning level is 0 just below level 1 threshold"""
+    expected_status = {'active': True, 'isTailgating': True,
+                       'duration': LEVEL_1_THRESHOLD - 1, 'warningLevel': 0}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TD, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_1_THRESHOLD - 1)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Warning level must be 0, one nanosecond below level 1 threshold")
+
+  def test_warning_level_is_one_on_threshold(self) -> None:
+    """Verify warning level is 1 on level 1 threshold"""
+    expected_status = {'active': True, 'isTailgating': True,
+                       'duration': LEVEL_1_THRESHOLD, 'warningLevel': 1}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TD, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_1_THRESHOLD)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Warning level must be 1 on level 1 threshold")
+
+  def test_warning_level_is_one_just_below_threshold(self) -> None:
+    """Verify warning level is 1 just below level 2 threshold"""
+    expected_status = {'active': True, 'isTailgating': True,
+                       'duration': LEVEL_2_THRESHOLD - 1, 'warningLevel': 1}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TD, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_2_THRESHOLD - 1)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Warning level must be 1, one nanosecond below level 2 threshold")
+
+  def test_warning_level_is_two_on_threshold(self) -> None:
+    """Verify warning level is 2 on level 2 threshold"""
+    expected_status = {'active': True, 'isTailgating': True,
+                       'duration': LEVEL_2_THRESHOLD, 'warningLevel': 2}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TD, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_2_THRESHOLD)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Warning level must be 2 on level 2 threshold")
+
+  def test_warning_level_is_two_just_below_threshold(self) -> None:
+    """Verify warning level is 2 just below level 3 threshold"""
+    expected_status = {'active': True, 'isTailgating': True,
+                       'duration': LEVEL_3_THRESHOLD - 1, 'warningLevel': 2}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TD, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_3_THRESHOLD - 1)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Warning level must be 2, one nanosecond below level 3 threshold")
+
+  def test_warning_level_is_three_on_threshold(self) -> None:
+    """Verify warning level is 3 on level 3 threshold"""
+    expected_status = {'active': True, 'isTailgating': True,
+                       'duration': LEVEL_3_THRESHOLD, 'warningLevel': 3}
+    actual_status = mock_tailgating_scenario(
+        self.SM, self.TD, v_ego=MINIMUM_VELOCITY, thw=THW_THRESHOLD - 0.5, duration=LEVEL_3_THRESHOLD)
+    self.assertEqual(expected_status, actual_status,
+                     msg="Warning level must be 3 on level 3 threshold")
 
   # start measurement
   def test_is_measuring_when_measurement_started(self) -> None:
@@ -211,43 +247,6 @@ class TestTailgatingDetection(unittest.TestCase):
     self.TD.stop_measurement()
     self.assertEqual(0, self.TD.start_time,
                      msg="start time must be reset to 0 when measurement stopped")
-
-  # determine warning level
-  def test_warning_level_is_zero_just_below_threshold(self) -> None:
-    """Verify warning level is 0 just below level 1 threshold"""
-    level = self.TD.determine_warning_level(LEVEL_1_THRESHOLD - 1)
-    self.assertEqual(
-        0, level, msg="Warning level must be 0, one nanosecond below level 1 threshold")
-
-  def test_warning_level_is_one_on_threshold(self) -> None:
-    """Verify warning level is 1 on level 1 threshold"""
-    level = self.TD.determine_warning_level(LEVEL_1_THRESHOLD)
-    self.assertEqual(
-        1, level, msg="Warning level must be 1 on level 1 threshold")
-
-  def test_warning_level_is_one_just_below_threshold(self) -> None:
-    """Verify warning level is 1 just below level 2 threshold"""
-    level = self.TD.determine_warning_level(LEVEL_2_THRESHOLD - 1)
-    self.assertEqual(
-        1, level, msg="Warning level must be 1, one nanosecond below level 2 threshold")
-
-  def test_warning_level_is_two_on_threshold(self) -> None:
-    """Verify warning level is 2 on level 2 threshold"""
-    level = self.TD.determine_warning_level(LEVEL_2_THRESHOLD)
-    self.assertEqual(
-        2, level, msg="Warning level must be 2 on level 2 threshold")
-
-  def test_warning_level_is_two_just_below_threshold(self) -> None:
-    """Verify warning level is 2 just below level 3 threshold"""
-    level = self.TD.determine_warning_level(LEVEL_3_THRESHOLD - 1)
-    self.assertEqual(
-        2, level, msg="Warning level must be 2, one nanosecond below level 3 threshold")
-
-  def test_warning_level_is_three_on_threshold(self) -> None:
-    """Verify warning level is 3 on level 3 threshold"""
-    level = self.TD.determine_warning_level(LEVEL_3_THRESHOLD)
-    self.assertEqual(
-        3, level, msg="Warning level must be 3 on level 3 threshold")
 
 
 if __name__ == "__main__":
