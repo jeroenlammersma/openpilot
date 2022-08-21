@@ -25,7 +25,7 @@ def get_closest_lead(lead_one: log.RadarState.LeadData,
 def is_tailgating(thw: float, v_ego: float) -> bool:
   # ego is tailgating when thw of lead is between 0 and threshold,
   # and velocity of ego is greater than minimum
-  return thw != 0 and thw < THW_THRESHOLD and v_ego >= MINIMUM_VELOCITY
+  return 0 < thw < THW_THRESHOLD and v_ego >= MINIMUM_VELOCITY
 
 
 class TailgatingDetection(CoachModule):
