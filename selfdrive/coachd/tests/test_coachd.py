@@ -32,14 +32,14 @@ class TestCoachD(unittest.TestCase):
   def test_default_modules_defined(self):
     """Ensure default modules are defined in capnp schema"""
     fieldnames = log.DrivingCoachState.schema.fieldnames
-    for field in COACH_MODULES.keys():
+    for field in COACH_MODULES:
       fail_msg = "%s not in DrivingCoachState schema" % (field)
       self.assertTrue(field in fieldnames, msg=fail_msg)
 
   def test_default_modules_types_contain_active_field(self):
     """Ensure default modules types contain a field named 'active' in capnp schema"""
     dcs_fields = log.DrivingCoachState.schema.fields
-    for field in COACH_MODULES.keys():
+    for field in COACH_MODULES:
       module_schema = dcs_fields[field].schema
       name = module_schema.node.displayName
       fail_msg = "field 'active' not defined in %s schema" % (name)
@@ -48,12 +48,12 @@ class TestCoachD(unittest.TestCase):
   def test_default_modules_types_active_field_is_bool(self):
     """Ensure default modules types 'active' field is of type bool in capnp schema"""
     dcs_fields = log.DrivingCoachState.schema.fields
-    for field in COACH_MODULES.keys():
+    for field in COACH_MODULES:
       module_schema = dcs_fields[field].schema
       name = module_schema.node.displayName
       d_type = module_schema.fields["active"].proto.to_dict()["slot"]["type"]
       fail_msg = "field 'active' not of type bool in %s schema" % (name)
-      self.assertTrue("bool" in d_type.keys(), msg=fail_msg)
+      self.assertTrue("bool" in d_type, msg=fail_msg)
 
   # abstract base class
   def test_default_modules_derived_from_base(self):
@@ -79,7 +79,7 @@ class TestCoachD(unittest.TestCase):
   def test_init_custom_module_added_to_modules(self):
     """Verify module passed in constructor is added to coachd modules"""
     CD = CoachD(modules={"custom_module": CustomModule})
-    self.assertTrue("custom_module" in CD.modules.keys(),
+    self.assertTrue("custom_module" in CD.modules,
                     msg="Module passed to init must be added to modules")
 
   def test_init_custom_module_is_sole_module_when_passed(self):

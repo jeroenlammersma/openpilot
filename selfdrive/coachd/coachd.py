@@ -34,7 +34,7 @@ class CoachD(object):
     self.validated_services = validated_services
 
   def is_field_active(self, field: str) -> bool:
-    return field in self.modules.keys()
+    return field in self.modules
 
   def update(self, sm: messaging.SubMaster) -> log.DrivingCoachState:
     dat = messaging.new_message('drivingCoachState')
