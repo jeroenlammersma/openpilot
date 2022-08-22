@@ -404,8 +404,8 @@ void NvgWindow::drawHud(QPainter &p) {
 
   // tailgating warning icon
   if (showTailgatingWarning) {
-    const int x = rect().right() - radius / (1.5 * 1.65) - (bdr_s * 2);
-    const int y = rect().top() + header_h;
+    int x = rect().right() - radius / (1.5 * 1.65) - (bdr_s * 2);
+    int y = rect().top() + header_h;
     p.drawPixmap(x - radius / 2, y - radius / 2, tailgating_img);
   }
 }

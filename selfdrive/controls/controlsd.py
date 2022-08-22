@@ -404,11 +404,12 @@ class Controls:
 
     # create tailgating events only when module is active
     tailgating_status = self.sm['drivingCoachState'].tailgatingStatus
-    if tailgating_status.active and (tailgating_level := tailgating_status.warningLevel) != 0:
+    if (tailgating_status.active
+        and (level := tailgating_status.warningLevel) != 0):
       switch = {1: EventName.tailgating,
                 2: EventName.promptTailgating,
                 3: EventName.persistentTailgating}
-      self.events.add(switch.get(tailgating_level))
+      self.events.add(switch.get(level))
 
   def data_sample(self):
     """Receive data from sockets and update carState"""
