@@ -21,7 +21,8 @@ class CoachD(object):
   def __init__(
       self,
       modules: Optional[Dict[str, Type[CoachModule]]] = None,
-      validated_services: Optional[List[str]] = None):
+      validated_services: Optional[List[str]] = None
+  ):
     # initialize modules
     if modules is None:
       modules = COACH_MODULES
@@ -51,7 +52,8 @@ class CoachD(object):
 
 def coachd_thread(
     sm: Optional[messaging.SubMaster] = None,
-    pm: Optional[messaging.PubMaster] = None):
+    pm: Optional[messaging.PubMaster] = None
+):
   # *** setup messaging ***
   if sm is None:
     sm = messaging.SubMaster(['carState', 'radarState'])
@@ -75,7 +77,8 @@ def coachd_thread(
 
 def main(
     sm: Optional[messaging.SubMaster] = None,
-    pm: Optional[messaging.PubMaster] = None):
+    pm: Optional[messaging.PubMaster] = None
+):
   coachd_thread(sm, pm)
 
 

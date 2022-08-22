@@ -18,7 +18,8 @@ def mock_tailgating_scenario(
     td: TailgatingDetection,
     v_ego: float,
     thw: float,
-    duration: int) -> log.DrivingCoachState.TailgatingStatus:
+    duration: int
+) -> log.DrivingCoachState.TailgatingStatus:
   sm = messaging.SubMaster(['carState', 'radarState'])
   send_mock_car_state(sm, v_ego)
   send_mock_radar_state(sm, lead_one_thw=thw)
@@ -40,7 +41,8 @@ def send_mock_radar_state(
     lead_one_thw: float = .0,
     lead_two_d_rel: Optional[float] = None,
     lead_two_thw: Optional[float] = None,
-    log_mono_time: int = 0) -> None:
+    log_mono_time: int = 0
+) -> None:
   rs = get_mock_radar_state(lead_one_d_rel, lead_one_thw,
                             lead_two_d_rel, lead_two_thw)
   rs = rs.radarState
@@ -53,7 +55,8 @@ def get_mock_radar_state(
     lead_one_d_rel: float = .0,
     lead_one_thw: float = .0,
     lead_two_d_rel: Optional[float] = None,
-    lead_two_thw: Optional[float] = None) -> log.RadarState:
+    lead_two_thw: Optional[float] = None
+) -> log.RadarState:
   # set lead two drel same as lead one if None
   if not lead_two_d_rel:
     lead_two_d_rel = lead_one_d_rel
