@@ -1,6 +1,7 @@
 from cereal import log, messaging
 from selfdrive.coachd.modules.base import CoachModule
 
+
 THW_THRESHOLD = 1.  # in m, ego is tailgating when THW is below threshold
 MINIMUM_VELOCITY = 5.  # in m/s, ego is not tailgating when velocity is below minimal
 
@@ -15,9 +16,9 @@ LEVEL_2_THRESHOLD = int(TIME_TILL_LEVEL_2 * 1e+9)
 LEVEL_3_THRESHOLD = int(TIME_TILL_LEVEL_3 * 1e+9)
 
 
-def get_closest_lead(lead_one: log.RadarState.LeadData,
-                     lead_two: log.RadarState.LeadData
-                     ) -> log.RadarState.LeadData:
+def get_closest_lead(
+    lead_one: log.RadarState.LeadData, lead_two: log.RadarState.LeadData
+) -> log.RadarState.LeadData:
   # return nearest lead relative to ego
   return lead_one if lead_one.dRel <= lead_two.dRel else lead_two
 
@@ -29,7 +30,8 @@ def is_tailgating(thw: float, v_ego: float) -> bool:
 
 
 class TailgatingDetection(CoachModule):
-  def __init__(self) -> None:
+
+  def __init__(self):
     self.measuring = False
     self.tailgating = False
     self.start_time = 0
@@ -45,7 +47,8 @@ class TailgatingDetection(CoachModule):
       return 1
     return 0
 
-  def update(self, sm: messaging.SubMaster) -> log.DrivingCoachState.TailgatingStatus:
+  def update(
+      self, sm: messaging.SubMaster) -> log.DrivingCoachState.TailgatingStatus:
     # if not sm.updated['radarState']:
     #   return self.create_tailgating_status()
 
@@ -75,10 +78,10 @@ class TailgatingDetection(CoachModule):
 
   def create_tailgating_status(self) -> log.DrivingCoachState.TailgatingStatus:
     return {
-        "active": True,
-        "isTailgating": bool(self.tailgating),
-        "duration": int(self.duration),
-        "warningLevel": int(self.warning_level)
+      "active": True,
+      "isTailgating": bool(self.tailgating),
+      "duration": int(self.duration),
+      "warningLevel": int(self.warning_level),
     }
 
   def start_measurement(self, mono_time: int) -> None:
