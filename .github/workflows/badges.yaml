@@ -1,7 +1,7 @@
 name: badges
 on:
-  # schedule:
-  #   - cron: '0 * * * *'
+  schedule:
+    - cron: '0 1,13 * * *'
   workflow_dispatch:
 
 env:
