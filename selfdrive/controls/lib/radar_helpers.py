@@ -15,6 +15,21 @@ v_ego_stationary = 4.   # no stationary object flag below this speed
 RADAR_TO_CENTER = 2.7   # (deprecated) RADAR is ~ 2.7m ahead from center of car
 RADAR_TO_CAMERA = 1.52   # RADAR is ~ 1.5m ahead from center of mesh frame
 
+FLOAT32_INF = 3.4028235e+38   # largest value Float32 can hold
+
+
+def calculate_thw(d_rel: float, v_ego: float) -> float:
+  # time headway = distance / velocity (in m/s), only when velocity of ego > 0
+  return d_rel / v_ego if v_ego > 0 else FLOAT32_INF
+
+
+def calculate_ttc(d_rel: float, v_rel: float, v_ego: float) -> float:
+  # time-to-collision = distance / relative velocity (in m/s)
+  # only when velocity of ego > 0 and relative velocity > 0 (gaining on lead vehicle)
+  # for openpilot, relative velocity needs to be negated
+  return d_rel / -v_rel if v_ego > 0 and -v_rel > 0 else FLOAT32_INF
+
+
 class Track():
   def __init__(self, v_lead, kalman_params):
     self.cnt = 0
@@ -24,7 +39,7 @@ class Track():
     self.K_K = kalman_params.K
     self.kf = KF1D([[v_lead], [0.0]], self.K_A, self.K_C, self.K_K)
 
-  def update(self, d_rel, y_rel, v_rel, v_lead, measured):
+  def update(self, d_rel, y_rel, v_rel, v_lead, measured, v_ego):
     # relative values, copy
     self.dRel = d_rel   # LONG_DIST
     self.yRel = y_rel   # -LAT_DIST
@@ -44,6 +59,10 @@ class Track():
       self.aLeadTau = _LEAD_ACCEL_TAU
     else:
       self.aLeadTau *= 0.9
+
+    # computed THW and TTC
+    self.thw = calculate_thw(self.dRel, v_ego)
+    self.ttc = calculate_ttc(self.dRel, self.vRel, v_ego)
 
     self.cnt += 1
 
@@ -116,6 +135,14 @@ class Cluster():
   def measured(self):
     return any(t.measured for t in self.tracks)
 
+  @property
+  def thw(self):
+    return mean([t.thw for t in self.tracks])
+
+  @property
+  def ttc(self):
+    return mean([t.ttc for t in self.tracks])
+
   def get_RadarState(self, model_prob=0.0):
     return {
       "dRel": float(self.dRel),
@@ -128,14 +155,18 @@ class Cluster():
       "fcw": self.is_potential_fcw(model_prob),
       "modelProb": model_prob,
       "radar": True,
-      "aLeadTau": float(self.aLeadTau)
+      "aLeadTau": float(self.aLeadTau),
+      "thw": float(self.thw),
+      "ttc": float(self.ttc)
     }
 
   def get_RadarState_from_vision(self, lead_msg, v_ego):
+    dRel = lead_msg.x[0] - RADAR_TO_CAMERA
+    vRel = lead_msg.v[0] - v_ego
     return {
-      "dRel": float(lead_msg.x[0] - RADAR_TO_CAMERA),
+      "dRel": float(dRel),
       "yRel": float(-lead_msg.y[0]),
-      "vRel": float(lead_msg.v[0] - v_ego),
+      "vRel": float(vRel),
       "vLead": float(lead_msg.v[0]),
       "vLeadK": float(lead_msg.v[0]),
       "aLeadK": float(0),
@@ -143,7 +174,9 @@ class Cluster():
       "fcw": False,
       "modelProb": float(lead_msg.prob),
       "radar": False,
-      "status": True
+      "status": True,
+      "thw": float(calculate_thw(dRel, v_ego)),
+      "ttc": float(calculate_ttc(dRel, vRel, v_ego))
     }
 
   def __str__(self):

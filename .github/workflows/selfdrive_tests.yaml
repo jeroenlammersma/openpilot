@@ -247,10 +247,12 @@ jobs:
         path: /tmp/comma_download_cache
         key: proc-replay-${{ hashFiles('.github/workflows/selfdrive_tests.yaml', 'selfdrive/test/process_replay/ref_commit') }}
     - name: Run replay
+      env:
+        IGNORED_FIELDS: "radarState.leadOne.thw radarState.leadOne.ttc radarState.leadTwo.thw radarState.leadTwo.ttc"
       run: |
         ${{ env.RUN }} "scons -j$(nproc) && \
-                        CI=1 coverage run selfdrive/test/process_replay/test_processes.py -j$(nproc) && \
-                        coverage xml"
+                        CI=1 coverage run selfdrive/test/process_replay/test_processes.py \
+                        --ignore-fields $IGNORED_FIELDS -j$(nproc) && coverage xml"
     - name: Print diff
       if: always()
       run: cat selfdrive/test/process_replay/diff.txt
