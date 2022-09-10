@@ -104,7 +104,7 @@ class Controls:
         ignore += ['roadCameraState']
       self.sm = messaging.SubMaster(['deviceState', 'pandaStates', 'peripheralState', 'modelV2', 'liveCalibration',
                                      'driverMonitoringState', 'longitudinalPlan', 'lateralPlan', 'liveLocationKalman',
-                                     'managerState', 'liveParameters', 'radarState'] + self.camera_packets + joystick_packet,
+                                     'managerState', 'liveParameters', 'radarState', 'drivingCoachState'] + self.camera_packets + joystick_packet,
                                     ignore_alive=ignore, ignore_avg_freq=['radarState', 'longitudinalPlan'])
 
     # set alternative experiences from parameters
@@ -421,6 +421,15 @@ class Controls:
     if CS.brakePressed and v_future >= self.CP.vEgoStarting \
       and self.CP.openpilotLongitudinalControl and CS.vEgo < 0.3:
       self.events.add(EventName.noTarget)
+
+    # create tailgating events only when module is active
+    tailgating_status = self.sm['drivingCoachState'].tailgatingStatus
+    if (tailgating_status.active
+        and (level := tailgating_status.warningLevel) != 0):
+      switch = {1: EventName.tailgating,
+                2: EventName.promptTailgating,
+                3: EventName.persistentTailgating}
+      self.events.add(switch.get(level))
 
   def data_sample(self):
     """Receive data from sockets and update carState"""

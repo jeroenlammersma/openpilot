@@ -488,7 +488,7 @@ location set</source>
 <context>
     <name>NvgWindow</name>
     <message>
-        <location filename="../qt/onroad.cc" line="+218"/>
+        <location filename="../qt/onroad.cc" line="+219"/>
         <source>km/h</source>
         <translation>km/h</translation>
     </message>
@@ -498,7 +498,7 @@ location set</source>
         <translation>mph</translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+74"/>
         <location line="+3"/>
         <source>MAX</source>
         <translation>最高定速</translation>
@@ -537,7 +537,7 @@ location set</source>
 <context>
     <name>PairingPopup</name>
     <message>
-        <location filename="../qt/widgets/prime.cc" line="+86"/>
+        <location filename="../qt/widgets/prime.cc" line="+88"/>
         <source>Pair your device to your comma account</source>
         <translation>将您的设备与comma账号配对</translation>
     </message>

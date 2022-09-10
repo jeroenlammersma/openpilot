@@ -940,4 +940,30 @@ EVENTS: Dict[int, Dict[str, Union[Alert, AlertCallbackType]]] = {
     ET.NO_ENTRY: NoEntryAlert("LKAS Disabled"),
   },
 
+  # ********** events for driving coach **********
+
+  EventName.tailgating: {
+    ET.PERMANENT: Alert(
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.LOWER, VisualAlert.none, AudibleAlert.prompt, .1),
+  },
+
+  EventName.promptTailgating: {
+    ET.PERMANENT: Alert(
+      "Tailgating",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .1),
+  },
+
+  EventName.persistentTailgating: {
+    ET.PERMANENT: Alert(
+      "TAILGATING",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.MID, VisualAlert.fcw, AudibleAlert.promptRepeat, .1),
+  },
+
 }

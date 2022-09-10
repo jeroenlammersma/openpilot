@@ -491,7 +491,7 @@ trabalho definido</translation>
 <context>
     <name>NvgWindow</name>
     <message>
-        <location filename="../qt/onroad.cc" line="+218"/>
+        <location filename="../qt/onroad.cc" line="+219"/>
         <source>km/h</source>
         <translation>km/h</translation>
     </message>
@@ -501,7 +501,7 @@ trabalho definido</translation>
         <translation>mph</translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+74"/>
         <location line="+3"/>
         <source>MAX</source>
         <translation>LIMITE</translation>
@@ -540,7 +540,7 @@ trabalho definido</translation>
 <context>
     <name>PairingPopup</name>
     <message>
-        <location filename="../qt/widgets/prime.cc" line="+86"/>
+        <location filename="../qt/widgets/prime.cc" line="+88"/>
         <source>Pair your device to your comma account</source>
         <translation>Pareie seu dispositivo à sua conta comma</translation>
     </message>
