@@ -6,7 +6,7 @@ on:
 env:
   BASE_IMAGE: openpilot-base
   CL_BASE_IMAGE: openpilot-base-cl
-  DOCKER_REGISTRY: ghcr.io/commaai
+  DOCKER_REGISTRY: ghcr.io/${{ github.repository_owner }}
   DOCKER_LOGIN: docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
 
   BUILD: |
@@ -45,7 +45,7 @@ jobs:
     timeout-minutes: 50
     env:
       IMAGE_NAME: openpilot-sim
-    if: github.repository == 'commaai/openpilot'
+    if: github.repository == '${{ github.repository_owner }}/openpilot'
     steps:
     - uses: actions/checkout@v3
       with:
@@ -61,7 +61,7 @@ jobs:
     - name: Build simulator image
       run: docker build --cache-from $DOCKER_REGISTRY/$IMAGE_NAME:latest -t $DOCKER_REGISTRY/$IMAGE_NAME:latest -f tools/sim/Dockerfile.sim .
     - name: Push to container registry
-      if: github.ref == 'refs/heads/master' && github.repository == 'commaai/openpilot'
+      if: github.ref == 'refs/heads/driving-coach' && github.repository == '${{ github.repository_owner }}/openpilot'
       run: |
         $DOCKER_LOGIN
         docker push $DOCKER_REGISTRY/$IMAGE_NAME:latest

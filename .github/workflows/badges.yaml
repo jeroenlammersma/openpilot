@@ -6,14 +6,14 @@ on:
 
 env:
   BASE_IMAGE: openpilot-base
-  DOCKER_REGISTRY: ghcr.io/commaai
+  DOCKER_REGISTRY: ghcr.io/${{ github.repository_owner }}
   RUN: docker run --shm-size 1G -v $PWD:/tmp/openpilot -w /tmp/openpilot -e PYTHONPATH=/tmp/openpilot -e NUM_JOBS -e JOB_ID -e GITHUB_ACTION -e GITHUB_REF -e GITHUB_HEAD_REF -e GITHUB_SHA -e GITHUB_REPOSITORY -e GITHUB_RUN_ID -v /tmp/scons_cache:/tmp/scons_cache -v /tmp/comma_download_cache:/tmp/comma_download_cache -v /tmp/openpilot_cache:/tmp/openpilot_cache $DOCKER_REGISTRY/$BASE_IMAGE:latest /bin/sh -c
 
 jobs:
   badges:
     name: create badges
     runs-on: ubuntu-20.04
-    if: github.repository == 'commaai/openpilot'
+    if: github.repository == '${{ github.repository_owner }}/openpilot'
     steps:
     - uses: actions/checkout@v3
       with:

@@ -6,7 +6,7 @@ on:
 
 env:
   BASE_IMAGE: openpilot-base
-  DOCKER_REGISTRY: ghcr.io/commaai
+  DOCKER_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
   DOCKER_LOGIN: docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
   BUILD: |
@@ -19,14 +19,14 @@ jobs:
     name: build prebuilt
     runs-on: ubuntu-20.04
     timeout-minutes: 60
-    if: github.repository == 'commaai/openpilot'
+    if: github.repository == '${{ github.repository_owner }}/openpilot'
     env:
       IMAGE_NAME: openpilot-prebuilt
     steps:
     - name: Wait for green check mark
       uses: lewagon/wait-on-check-action@e2558238c09778af25867eb5de5a3ce4bbae3dcd
       with:
-        ref: master
+        ref: driving-coach
         wait-interval: 30
         running-workflow-name: 'build prebuilt'
         check-regexp: ^((?!.*(build master-ci).*).)*$
