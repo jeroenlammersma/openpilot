@@ -1,5 +1,7 @@
 ![](https://i.imgur.com/b0ZyIx5.jpg)
 
+[![logo-dsh](https://user-images.githubusercontent.com/33349469/186772390-b9fd18a9-21a6-43cf-9cd7-457b656cb4d8.png)](https://digitalsocietyhub.nl/)
+
 Table of Contents
 =======================
 
