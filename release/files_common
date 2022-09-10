@@ -388,12 +388,16 @@ selfdrive/assets/assets.qrc
 selfdrive/assets/*.png
 selfdrive/assets/*.svg
 selfdrive/assets/body/*
+selfdrive/assets/coach/*
 selfdrive/assets/fonts/*.ttf
 selfdrive/assets/icons/*
 selfdrive/assets/images/*
 selfdrive/assets/offroad/*
 selfdrive/assets/sounds/*
 selfdrive/assets/training/*
+
+selfdrive/coachd/*.py
+selfdrive/coachd/modules/*.py
 
 third_party/SConscript
 
