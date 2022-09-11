@@ -21,7 +21,7 @@ int64_t get_raw_value(const std::vector<uint8_t> &msg, const Signal &sig) {
     int msb = (int)(sig.msb / 8) == i ? sig.msb : (i+1)*8 - 1;
     int size = msb - lsb + 1;
 
-    uint8_t d = (msg[i] >> (lsb - (i*8))) & ((1ULL << size) - 1);
+    uint64_t d = (msg[i] >> (lsb - (i*8))) & ((1ULL << size) - 1);
     ret |= d << (bits - size);
 
     bits -= size;
@@ -275,21 +275,30 @@ void CANParser::UpdateCans(uint64_t sec, const capnp::DynamicStruct::Reader& cms
 void CANParser::UpdateValid(uint64_t sec) {
   const bool show_missing = (last_sec - first_sec) > 8e9;
 
-  can_valid = true;
+  bool _valid = true;
+  bool _counters_valid = true;
   for (const auto& kv : message_states) {
     const auto& state = kv.second;
+
+    if (state.counter_fail >= MAX_BAD_COUNTER) {
+      _counters_valid = false;
+    }
 
     const bool missing = state.last_seen_nanos == 0;
     const bool timed_out = (sec - state.last_seen_nanos) > state.check_threshold;
     if (state.check_threshold > 0 && (missing || timed_out)) {
-      if (missing) {
-        LOGE("0x%X MISSING", state.address);
-      } else if (show_missing) {
-        LOGE("0x%X TIMEOUT", state.address);
+      if (show_missing && !bus_timeout) {
+        if (missing) {
+          LOGE("0x%X NOT SEEN", state.address);
+        } else if (timed_out) {
+          LOGE("0x%X TIMED OUT", state.address);
+        }
       }
-      can_valid = false;
+      _valid = false;
     }
   }
+  can_invalid_cnt = _valid ? 0 : (can_invalid_cnt + 1);
+  can_valid = (can_invalid_cnt < CAN_INVALID_CNT) && _counters_valid;
 }
 
 std::vector<SignalValue> CANParser::query_latest() {
