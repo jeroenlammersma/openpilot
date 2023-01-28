@@ -24,12 +24,14 @@ from selfdrive.car.honda.values import CruiseButtons
 from selfdrive.test.helpers import set_params_enabled
 from tools.sim.lib.can import can_function
 
+import cv2
+
 W, H = 1928, 1208
 REPEAT_COUNTER = 5
 PRINT_DECIMATION = 100
 STEER_RATIO = 15.
-
-pm = messaging.PubMaster(['roadCameraState', 'wideRoadCameraState', 'sensorEvents', 'can', "gpsLocationExternal"])
+pm = messaging.PubMaster(
+  ['roadCameraState', 'wideRoadCameraState', 'driverCameraState', 'sensorEvents', 'can', "gpsLocationExternal"])
 sm = messaging.SubMaster(['carControl', 'controlsState'])
 
 def parse_args(add_args=None):
@@ -41,6 +43,7 @@ def parse_args(add_args=None):
   parser.add_argument('--spawn_point', dest='num_selected_spawn_point', type=int, default=16)
 
   return parser.parse_args(add_args)
+
 
 
 class VehicleState:
@@ -69,10 +72,12 @@ class Camerad:
   def __init__(self):
     self.frame_road_id = 0
     self.frame_wide_id = 0
+    self.frame_driver_id = 0
     self.vipc_server = VisionIpcServer("camerad")
 
     self.vipc_server.create_buffers(VisionStreamType.VISION_STREAM_ROAD, 5, False, W, H)
     self.vipc_server.create_buffers(VisionStreamType.VISION_STREAM_WIDE_ROAD, 5, False, W, H)
+    self.vipc_server.create_buffers(VisionStreamType.VISION_STREAM_DRIVER, 5, False, W, H)
     self.vipc_server.start_listener()
 
     # set up for pyopencl rgb to yuv conversion
@@ -95,9 +100,17 @@ class Camerad:
     self._cam_callback(image, self.frame_wide_id, 'wideRoadCameraState', VisionStreamType.VISION_STREAM_WIDE_ROAD)
     self.frame_wide_id += 1
 
+  def cam_callback_driver(self, image):
+    self._cam_callback(image, self.frame_driver_id, 'driverCameraState', VisionStreamType.VISION_STREAM_DRIVER)
+    self.frame_driver_id += 1
+
   def _cam_callback(self, image, frame_id, pub_type, yuv_type):
-    img = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-    img = np.reshape(img, (H, W, 4))
+
+    if pub_type == "driverCameraState":
+      img = np.reshape(image, (H, W, 4))
+    else:
+      img = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+      img = np.reshape(img, (H, W, 4))
     img = img[:, :, [0, 1, 2]].copy()
 
     # convert RGB frame to YUV
@@ -119,6 +132,7 @@ class Camerad:
     }
     setattr(dat, pub_type, msg)
     pm.send(pub_type, dat)
+
 
 def imu_callback(imu, vehicle_state):
   vehicle_state.bearing_deg = math.degrees(imu.compass)
@@ -216,6 +230,38 @@ def fake_driver_monitoring(exit_event: threading.Event):
     time.sleep(DT_DMON)
 
 
+def webcam_function(camerad: Camerad, exit_event: threading.Event, environment='carla', cam_type='driver'):
+  rk = Ratekeeper(10)
+  # Load the video
+  myframeid = 0
+  if cam_type == 'driver':  # These two video stream should be different, otherwise global /io/opencv/modules/videoio/src/cap_v4l.cpp (902) open VIDEOIO(V4L2:/dev/video0): can't open camera by index
+    cap = cv2.VideoCapture(0)  # set camera ID here, index X in /dev/videoX
+
+  while not exit_event.is_set():
+    # print("image recieved")
+    ret, frame = cap.read()
+    if not ret:
+      end_of_video = True
+      break
+    frame = cv2.resize(frame, (W, H))
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+    # cv2.imwrite(cam_type + '.jpg', frame)
+    if cam_type == 'driver':
+      camerad._cam_callback(frame, frame_id=myframeid, pub_type='driverCameraState',
+                            yuv_type=VisionStreamType.VISION_STREAM_DRIVER)
+
+    myframeid = myframeid + 1
+    rk.keep_time()
+
+
+def test_driverCameraState(vehicle_state, exit_event: threading.Event):
+  sm = messaging.SubMaster(['driverStateV2'])
+  while not exit_event.is_set():
+    sm.update()
+    data = sm['driverStateV2']
+    print(data)
+
+
 def can_function_runner(vs: VehicleState, exit_event: threading.Event):
   i = 0
   while not exit_event.is_set():
@@ -305,7 +351,8 @@ class CarlaBridge:
     vehicle_bp = blueprint_library.filter('vehicle.tesla.*')[1]
     vehicle_bp.set_attribute('role_name', 'hero')
     spawn_points = world_map.get_spawn_points()
-    assert len(spawn_points) > self._args.num_selected_spawn_point, f'''No spawn point {self._args.num_selected_spawn_point}, try a value between 0 and
+    assert len(
+      spawn_points) > self._args.num_selected_spawn_point, f'''No spawn point {self._args.num_selected_spawn_point}, try a value between 0 and
       {len(spawn_points)} for this town.'''
     spawn_point = spawn_points[self._args.num_selected_spawn_point]
     vehicle = world.spawn_actor(vehicle_bp, spawn_point)
@@ -340,7 +387,8 @@ class CarlaBridge:
       road_camera = create_camera(fov=40, callback=self._camerad.cam_callback_road)
       self._carla_objects.append(road_camera)
 
-    road_wide_camera = create_camera(fov=120, callback=self._camerad.cam_callback_wide_road)  # fov bigger than 120 shows unwanted artifacts
+    road_wide_camera = create_camera(fov=120,
+                                     callback=self._camerad.cam_callback_wide_road)  # fov bigger than 120 shows unwanted artifacts
     self._carla_objects.append(road_wide_camera)
 
     vehicle_state = VehicleState()
@@ -355,10 +403,17 @@ class CarlaBridge:
     gps.listen(lambda gps: gps_callback(gps, vehicle_state))
 
     self._carla_objects.extend([imu, gps])
+
+    # TEST webcam voor driverCamera
+    # self._threads.append(threading.Thread(target=test_driverCameraState, args=(vehicle_state, self._exit_event)))
+    # /TEST
+
     # launch fake car threads
     self._threads.append(threading.Thread(target=panda_state_function, args=(vehicle_state, self._exit_event,)))
     self._threads.append(threading.Thread(target=peripheral_state_function, args=(self._exit_event,)))
-    self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
+    #self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,))) #Enable for fake driver monitoring in the simulator
+    self._threads.append(
+      threading.Thread(target=webcam_function, args=(self._camerad, self._exit_event, 'carla', 'driver'))) #Enable for real driver monitoring in the simulator
     self._threads.append(threading.Thread(target=can_function_runner, args=(vehicle_state, self._exit_event,)))
     for t in self._threads:
       t.start()
@@ -527,6 +582,19 @@ class CarlaBridge:
 if __name__ == "__main__":
   q: Any = Queue()
   args = parse_args()
+
+  # BEGIN TEST
+  # W, H = 1928, 1208
+  # cap = cv2.VideoCapture(0)
+  # ret, frame = cap.read()
+  # end_of_video = True
+  #
+  # frame = cv2.resize(frame, (W, H))
+  # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+  # plt.imshow(frame)
+  # plt.show()
+  # exit()
+  # EINDE TEST
 
   try:
     carla_bridge = CarlaBridge(args)
