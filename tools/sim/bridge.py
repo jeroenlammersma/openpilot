@@ -34,6 +34,7 @@ pm = messaging.PubMaster(
   ['roadCameraState', 'wideRoadCameraState', 'driverCameraState', 'sensorEvents', 'can', "gpsLocationExternal"])
 sm = messaging.SubMaster(['carControl', 'controlsState'])
 
+
 def parse_args(add_args=None):
   parser = argparse.ArgumentParser(description='Bridge between CARLA and openpilot.')
   parser.add_argument('--joystick', action='store_true')
@@ -41,9 +42,9 @@ def parse_args(add_args=None):
   parser.add_argument('--dual_camera', action='store_true')
   parser.add_argument('--town', type=str, default='Town04_Opt')
   parser.add_argument('--spawn_point', dest='num_selected_spawn_point', type=int, default=16)
+  parser.add_argument('--enable_dm', type=int, default=0)  # sets dm state, 0: fake dm, 1: real dm, 2: only webcam
 
   return parser.parse_args(add_args)
-
 
 
 class VehicleState:
@@ -230,15 +231,13 @@ def fake_driver_monitoring(exit_event: threading.Event):
     time.sleep(DT_DMON)
 
 
-def webcam_function(camerad: Camerad, exit_event: threading.Event, environment='carla', cam_type='driver'):
+def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
   rk = Ratekeeper(10)
   # Load the video
   myframeid = 0
-  if cam_type == 'driver':  # These two video stream should be different, otherwise global /io/opencv/modules/videoio/src/cap_v4l.cpp (902) open VIDEOIO(V4L2:/dev/video0): can't open camera by index
-    cap = cv2.VideoCapture(0)  # set camera ID here, index X in /dev/videoX
+  cap = cv2.VideoCapture(0)  # set camera ID here, index X in /dev/videoX
 
   while not exit_event.is_set():
-    # print("image recieved")
     ret, frame = cap.read()
     if not ret:
       end_of_video = True
@@ -246,10 +245,9 @@ def webcam_function(camerad: Camerad, exit_event: threading.Event, environment='
     frame = cv2.resize(frame, (W, H))
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
     # cv2.imwrite(cam_type + '.jpg', frame)
-    if cam_type == 'driver':
+    if self._args.enable_dm == 1:
       camerad._cam_callback(frame, frame_id=myframeid, pub_type='driverCameraState',
                             yuv_type=VisionStreamType.VISION_STREAM_DRIVER)
-
     myframeid = myframeid + 1
     rk.keep_time()
 
@@ -411,9 +409,15 @@ class CarlaBridge:
     # launch fake car threads
     self._threads.append(threading.Thread(target=panda_state_function, args=(vehicle_state, self._exit_event,)))
     self._threads.append(threading.Thread(target=peripheral_state_function, args=(self._exit_event,)))
-    #self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,))) #Enable for fake driver monitoring in the simulator
-    self._threads.append(
-      threading.Thread(target=webcam_function, args=(self._camerad, self._exit_event, 'carla', 'driver'))) #Enable for real driver monitoring in the simulator
+    if self._args.enable_dm in (1, 2):
+      # 1: Enables real driver monitoring in the simulator
+      # 2: Enables camera only mode
+      self._threads.append(
+        threading.Thread(target=webcam_function, args=(
+          self._camerad, self._exit_event,)))
+    else:
+      # Enables fake driver monitoring in the simulator
+      self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
     self._threads.append(threading.Thread(target=can_function_runner, args=(vehicle_state, self._exit_event,)))
     for t in self._threads:
       t.start()
