@@ -212,6 +212,7 @@ def gps_callback(gps, vehicle_state):
 
 
 def fake_driver_monitoring(exit_event: threading.Event):
+  print("Driver Monitoring disabled")
   pm = messaging.PubMaster(['driverStateV2', 'driverMonitoringState'])
   while not exit_event.is_set():
     # dmonitoringmodeld output
@@ -236,7 +237,8 @@ def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
   # Load the video
   myframeid = 0
   cap = cv2.VideoCapture(0)  # set camera ID here, index X in /dev/videoX
-
+  if self._args.enable_dm == 2:
+    print("Webcam only mode enabled")
   while not exit_event.is_set():
     ret, frame = cap.read()
     if not ret:
@@ -246,6 +248,7 @@ def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
     # cv2.imwrite(cam_type + '.jpg', frame)
     if self._args.enable_dm == 1:
+      print("Driver Monitoring enabled")
       camerad._cam_callback(frame, frame_id=myframeid, pub_type='driverCameraState',
                             yuv_type=VisionStreamType.VISION_STREAM_DRIVER)
     myframeid = myframeid + 1
@@ -412,9 +415,7 @@ class CarlaBridge:
     if self._args.enable_dm in (1, 2):
       # 1: Enables real driver monitoring in the simulator
       # 2: Enables camera only mode
-      self._threads.append(
-        threading.Thread(target=webcam_function, args=(
-          self._camerad, self._exit_event,)))
+      self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
     else:
       # Enables fake driver monitoring in the simulator
       self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
