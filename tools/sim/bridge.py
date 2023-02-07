@@ -231,24 +231,26 @@ def fake_driver_monitoring(exit_event: threading.Event):
 
 
 def webcam_function(camerad: Camerad, exit_event: threading.Event, environment='carla', cam_type='driver'):
-  rk = Ratekeeper(10)
-  # Load the video
+  rk = Ratekeeper(10) # Makes sure 10 frames are sent per second.
   myframeid = 0
-  if cam_type == 'driver':  # These two video stream should be different, otherwise global /io/opencv/modules/videoio/src/cap_v4l.cpp (902) open VIDEOIO(V4L2:/dev/video0): can't open camera by index
-    cap = cv2.VideoCapture(0)  # set camera ID here, index X in /dev/videoX
+
+  if cam_type == 'driver':
+    cap = cv2.VideoCapture(0)
 
   while not exit_event.is_set():
-    # print("image recieved")
     ret, frame = cap.read()
     if not ret:
       end_of_video = True
       break
+
+    # Frame is resized and the color format is changed.
     frame = cv2.resize(frame, (W, H))
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
-    # cv2.imwrite(cam_type + '.jpg', frame)
+
     if cam_type == 'driver':
-      camerad._cam_callback(frame, frame_id=myframeid, pub_type='driverCameraState',
-                            yuv_type=VisionStreamType.VISION_STREAM_DRIVER)
+      camerad.cam_callback_driver(frame)
+      # camerad._cam_callback(frame, frame_id=myframeid, pub_type='driverCameraState',
+      #                       yuv_type=VisionStreamType.VISION_STREAM_DRIVER)
 
     myframeid = myframeid + 1
     rk.keep_time()
