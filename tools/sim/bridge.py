@@ -42,8 +42,9 @@ def parse_args(add_args=None):
   parser.add_argument('--dual_camera', action='store_true')
   parser.add_argument('--town', type=str, default='Town04_Opt')
   parser.add_argument('--spawn_point', dest='num_selected_spawn_point', type=int, default=16)
-  parser.add_argument('--enable_dm', type=int, default=0)  # sets dm state, 0: fake dm, 1: real dm, 2: only webcam
-
+  # sets dm state, 0: fake dm, 1: real dm, 2: only webcam
+  # anything higher than 2 will default to no driver monitoring
+  parser.add_argument('--dm_mode', type=int, default=0)
   return parser.parse_args(add_args)
 
 
@@ -233,11 +234,13 @@ def fake_driver_monitoring(exit_event: threading.Event):
 
 
 def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
+  # Ratekeeper defines the limit of requests or in this case frames are sent
+  # Here the rate is set to 10 frames per second
   rk = Ratekeeper(10)
   # Load the video
   myframeid = 0
   cap = cv2.VideoCapture(0)  # set camera ID here, index X in /dev/videoX
-  if self._args.enable_dm == 2:
+  if self._args.dm_mode == 2:
     print("Webcam only mode enabled")
   while not exit_event.is_set():
     ret, frame = cap.read()
@@ -247,7 +250,7 @@ def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
     frame = cv2.resize(frame, (W, H))
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
     # cv2.imwrite(cam_type + '.jpg', frame)
-    if self._args.enable_dm == 1:
+    if self._args.dm_mode == 1:
       print("Driver Monitoring enabled")
       camerad._cam_callback(frame, frame_id=myframeid, pub_type='driverCameraState',
                             yuv_type=VisionStreamType.VISION_STREAM_DRIVER)
@@ -412,7 +415,7 @@ class CarlaBridge:
     # launch fake car threads
     self._threads.append(threading.Thread(target=panda_state_function, args=(vehicle_state, self._exit_event,)))
     self._threads.append(threading.Thread(target=peripheral_state_function, args=(self._exit_event,)))
-    if self._args.enable_dm in (1, 2):
+    if self._args.dm_mode in (1, 2):
       # 1: Enables real driver monitoring in the simulator
       # 2: Enables camera only mode
       self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
