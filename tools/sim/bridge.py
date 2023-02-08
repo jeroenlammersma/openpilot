@@ -3,6 +3,8 @@ import argparse
 import math
 import os
 import signal
+import sys
+import sysconfig
 import threading
 import time
 from multiprocessing import Process, Queue
@@ -22,7 +24,10 @@ from common.params import Params
 from common.realtime import DT_DMON, Ratekeeper
 from selfdrive.car.honda.values import CruiseButtons
 from selfdrive.test.helpers import set_params_enabled
+from tools.sim.camera_gui import CameraWidget
 from tools.sim.lib.can import can_function
+
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 import cv2
 
@@ -83,7 +88,7 @@ class Camerad:
     # set up for pyopencl rgb to yuv conversion
     self.ctx = cl.create_some_context()
     self.queue = cl.CommandQueue(self.ctx)
-    cl_arg = f" -DHEIGHT={H} -DWIDTH={W} -DRGB_STRIDE={W * 3} -DUV_WIDTH={W // 2} -DUV_HEIGHT={H // 2} -DRGB_SIZE={W * H} -DCL_DEBUG "
+    cl_arg = f" -DHEIGHT={H} -DWIDTH={W} -DRGB_STRIDE={W * 3} -DUV_WIDTH={W // 2} -DUV_HEIGHT={H // 2} -DRGB_SIZE={W * H} -DCL_DEBUG"
 
     kernel_fn = os.path.join(BASEDIR, "tools/sim/rgb_to_nv12.cl")
     with open(kernel_fn) as f:
@@ -229,31 +234,39 @@ def fake_driver_monitoring(exit_event: threading.Event):
 
     time.sleep(DT_DMON)
 
+def webcam_gui_function():
+  app = QtWidgets.QApplication([])
 
-def webcam_function(camerad: Camerad, exit_event: threading.Event, environment='carla', cam_type='driver'):
+  widget = CameraWidget()
+  widget.show()
+
+  app.exec_()
+
+  # app.exec_()
+
+def webcam_function(camerad: Camerad, exit_event: threading.Event):
   rk = Ratekeeper(10) # Makes sure 10 frames are sent per second.
-  myframeid = 0
+  # myframeid = 0
 
-  if cam_type == 'driver':
-    cap = cv2.VideoCapture(0)
+  cap = cv2.VideoCapture(0)
 
   while not exit_event.is_set():
     ret, frame = cap.read()
     if not ret:
-      end_of_video = True
       break
 
     # Frame is resized and the color format is changed.
     frame = cv2.resize(frame, (W, H))
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
 
-    if cam_type == 'driver':
-      camerad.cam_callback_driver(frame)
+    # camera_widget.set_image(frame)    
+    camerad.cam_callback_driver(frame)
       # camerad._cam_callback(frame, frame_id=myframeid, pub_type='driverCameraState',
       #                       yuv_type=VisionStreamType.VISION_STREAM_DRIVER)
 
-    myframeid = myframeid + 1
     rk.keep_time()
+
+  
 
 
 def test_driverCameraState(vehicle_state, exit_event: threading.Event):
@@ -415,7 +428,8 @@ class CarlaBridge:
     self._threads.append(threading.Thread(target=peripheral_state_function, args=(self._exit_event,)))
     #self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,))) #Enable for fake driver monitoring in the simulator
     self._threads.append(
-      threading.Thread(target=webcam_function, args=(self._camerad, self._exit_event, 'carla', 'driver'))) #Enable for real driver monitoring in the simulator
+      threading.Thread(target=webcam_function, args=(self._camerad, self._exit_event))) #Enable for real driver monitoring in the simulator
+    self._threads.append(threading.Thread(target=webcam_gui_function)) # webcam GUI
     self._threads.append(threading.Thread(target=can_function_runner, args=(vehicle_state, self._exit_event,)))
     for t in self._threads:
       t.start()
@@ -585,18 +599,7 @@ if __name__ == "__main__":
   q: Any = Queue()
   args = parse_args()
 
-  # BEGIN TEST
-  # W, H = 1928, 1208
-  # cap = cv2.VideoCapture(0)
-  # ret, frame = cap.read()
-  # end_of_video = True
-  #
-  # frame = cv2.resize(frame, (W, H))
-  # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
-  # plt.imshow(frame)
-  # plt.show()
-  # exit()
-  # EINDE TEST
+  # app = QtWidgets.QApplication([])
 
   try:
     carla_bridge = CarlaBridge(args)
@@ -613,6 +616,10 @@ if __name__ == "__main__":
 
       keyboard_poll_thread(q)
     p.join()
+
+    # webcam_gui_function()
+
+    # app.exec()
 
   finally:
     # Try cleaning up the wide camera param
