@@ -131,7 +131,7 @@ class Camerad:
     eof = int(frame_id * 0.05 * 1e9)
 
     self.vipc_server.send(yuv_type, yuv.data.tobytes(), frame_id, eof, eof)
-    
+
     if yuv_type == VisionStreamType.VISION_STREAM_DRIVER:
       self.vipc_webcam_gui_server.send(yuv_type, rgb.data.tobytes(), frame_id, eof, eof)
 
@@ -266,14 +266,14 @@ def webcam_function(camerad: Camerad, exit_event: threading.Event):
     frame = cv2.resize(frame, (W, H))
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
 
-    # camera_widget.set_image(frame)    
+    # camera_widget.set_image(frame)
     camerad.cam_callback_driver(frame)
       # camerad._cam_callback(frame, frame_id=myframeid, pub_type='driverCameraState',
       #                       yuv_type=VisionStreamType.VISION_STREAM_DRIVER)
 
     rk.keep_time()
 
-  
+
 
 
 def test_driverCameraState(vehicle_state, exit_event: threading.Event):
@@ -427,7 +427,7 @@ class CarlaBridge:
     self._carla_objects.extend([imu, gps])
 
     # TEST webcam voor driverCamera
-    # self._threads.append(threading.Thread(target=test_driverCameraState, args=(vehicle_state, self._exit_event)))
+    self._threads.append(threading.Thread(target=test_driverCameraState, args=(vehicle_state, self._exit_event)))
     # /TEST
 
     # launch fake car threads
