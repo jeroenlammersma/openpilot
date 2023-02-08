@@ -17,28 +17,31 @@ from common.realtime import Ratekeeper
 
 from cereal.visionipc import VisionIpcClient, VisionStreamType
 
+H = 1208
+W = 1928
+
 class Thread(QThread):
-    rk = Ratekeeper(10)
     changePixmap = pyqtSignal(QImage)
 
     def run(self):
-        self.client = VisionIpcClient("camerad", VisionStreamType.VISION_STREAM_DRIVER, False)
+        self.client = VisionIpcClient("webcamguid", VisionStreamType.VISION_STREAM_DRIVER, False)
         self.client.connect(True)
 
-        print(self.client.is_connected())
+        while True:
+            frame = self.client.recv()
+            frame = np.array(frame)
 
-        while frame := self.client.recv():
-            rgbImage = cv2.cvtColor(frame, cv2.COLOR_YUV420p2RGB)
+            if frame.any():
+                frame = np.reshape(frame, (H, W, 3))
 
-            if frame != None:
-                print('asdfasdfasdfasdf')
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            h, w, ch = rgbImage.shape
-            bytesPerLine = ch * w
-            convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
-            p = convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
-            self.changePixmap.emit(p)
-            self.rk.keep_time()
+                bytesPerLine = W * 3
+
+                convertToQtFormat = QImage(frame.data, W, H, bytesPerLine, QImage.Format_RGB888)
+
+                pixMap = convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
+                self.changePixmap.emit(pixMap)
         
 
 
@@ -60,5 +63,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     widget = CameraWidget()
+
+    widget.show()
 
     app.exit(app.exec_())

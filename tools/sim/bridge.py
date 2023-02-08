@@ -85,6 +85,10 @@ class Camerad:
     self.vipc_server.create_buffers(VisionStreamType.VISION_STREAM_DRIVER, 5, False, W, H)
     self.vipc_server.start_listener()
 
+    self.vipc_webcam_gui_server = VisionIpcServer("webcamguid")
+    self.vipc_webcam_gui_server.create_buffers(VisionStreamType.VISION_STREAM_DRIVER, 1, True, W, H)
+    self.vipc_webcam_gui_server.start_listener()
+
     # set up for pyopencl rgb to yuv conversion
     self.ctx = cl.create_some_context()
     self.queue = cl.CommandQueue(self.ctx)
@@ -127,6 +131,9 @@ class Camerad:
     eof = int(frame_id * 0.05 * 1e9)
 
     self.vipc_server.send(yuv_type, yuv.data.tobytes(), frame_id, eof, eof)
+    
+    if yuv_type == VisionStreamType.VISION_STREAM_DRIVER:
+      self.vipc_webcam_gui_server.send(yuv_type, rgb.data.tobytes(), frame_id, eof, eof)
 
     dat = messaging.new_message(pub_type)
     msg = {
@@ -429,7 +436,7 @@ class CarlaBridge:
     #self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,))) #Enable for fake driver monitoring in the simulator
     self._threads.append(
       threading.Thread(target=webcam_function, args=(self._camerad, self._exit_event))) #Enable for real driver monitoring in the simulator
-    self._threads.append(threading.Thread(target=webcam_gui_function)) # webcam GUI
+    # self._threads.append(threading.Thread(target=webcam_gui_function)) # webcam GUI
     self._threads.append(threading.Thread(target=can_function_runner, args=(vehicle_state, self._exit_event,)))
     for t in self._threads:
       t.start()
@@ -599,8 +606,6 @@ if __name__ == "__main__":
   q: Any = Queue()
   args = parse_args()
 
-  # app = QtWidgets.QApplication([])
-
   try:
     carla_bridge = CarlaBridge(args)
     p = carla_bridge.run(q)
@@ -616,10 +621,6 @@ if __name__ == "__main__":
 
       keyboard_poll_thread(q)
     p.join()
-
-    # webcam_gui_function()
-
-    # app.exec()
 
   finally:
     # Try cleaning up the wide camera param
