@@ -61,4 +61,5 @@ procs = [
   # Experimental
   PythonProcess("rawgpsd", "selfdrive.sensord.rawgps.rawgpsd", enabled=(TICI and os.path.isfile("/persist/comma/use-quectel-rawgps"))),
 ]
+
 managed_processes = {p.name: p for p in procs}

@@ -3,6 +3,8 @@ import argparse
 import math
 import os
 import signal
+import sys
+import sysconfig
 import threading
 import time
 from multiprocessing import Process, Queue
@@ -22,7 +24,10 @@ from common.params import Params
 from common.realtime import DT_DMON, Ratekeeper
 from selfdrive.car.honda.values import CruiseButtons
 from selfdrive.test.helpers import set_params_enabled
+from tools.sim.camera_gui import CameraWidget
 from tools.sim.lib.can import can_function
+
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 import cv2
 
@@ -81,10 +86,14 @@ class Camerad:
     self.vipc_server.create_buffers(VisionStreamType.VISION_STREAM_DRIVER, 5, False, W, H)
     self.vipc_server.start_listener()
 
+    self.vipc_webcam_gui_server = VisionIpcServer("webcamguid")
+    self.vipc_webcam_gui_server.create_buffers(VisionStreamType.VISION_STREAM_DRIVER, 1, True, W, H)
+    self.vipc_webcam_gui_server.start_listener()
+
     # set up for pyopencl rgb to yuv conversion
     self.ctx = cl.create_some_context()
     self.queue = cl.CommandQueue(self.ctx)
-    cl_arg = f" -DHEIGHT={H} -DWIDTH={W} -DRGB_STRIDE={W * 3} -DUV_WIDTH={W // 2} -DUV_HEIGHT={H // 2} -DRGB_SIZE={W * H} -DCL_DEBUG "
+    cl_arg = f" -DHEIGHT={H} -DWIDTH={W} -DRGB_STRIDE={W * 3} -DUV_WIDTH={W // 2} -DUV_HEIGHT={H // 2} -DRGB_SIZE={W * H} -DCL_DEBUG"
 
     kernel_fn = os.path.join(BASEDIR, "tools/sim/rgb_to_nv12.cl")
     with open(kernel_fn) as f:
@@ -123,6 +132,9 @@ class Camerad:
     eof = int(frame_id * 0.05 * 1e9)
 
     self.vipc_server.send(yuv_type, yuv.data.tobytes(), frame_id, eof, eof)
+
+    if yuv_type == VisionStreamType.VISION_STREAM_DRIVER:
+      self.vipc_webcam_gui_server.send(yuv_type, rgb.data.tobytes(), frame_id, eof, eof)
 
     dat = messaging.new_message(pub_type)
     msg = {
@@ -231,6 +243,15 @@ def fake_driver_monitoring(exit_event: threading.Event):
 
     time.sleep(DT_DMON)
 
+def webcam_gui_function():
+  app = QtWidgets.QApplication([])
+
+  widget = CameraWidget()
+  widget.show()
+
+  app.exec_()
+
+  # app.exec_()
 
 def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
   # Ratekeeper defines the limit of requests or in this case frames are sent
@@ -246,7 +267,6 @@ def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
   while not exit_event.is_set():
     ret, frame = cap.read()
     if not ret:
-      end_of_video = True
       break
 
     # Frame is resized and the color format is changed.
@@ -256,7 +276,6 @@ def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
     if self._args.dm_mode == 1:
       camerad.cam_callback_driver(frame)
 
-    myframeid = myframeid + 1
     rk.keep_time()
 
 def can_function_runner(vs: VehicleState, exit_event: threading.Event):
@@ -581,19 +600,6 @@ class CarlaBridge:
 if __name__ == "__main__":
   q: Any = Queue()
   args = parse_args()
-
-  # BEGIN TEST
-  # W, H = 1928, 1208
-  # cap = cv2.VideoCapture(0)
-  # ret, frame = cap.read()
-  # end_of_video = True
-  #
-  # frame = cv2.resize(frame, (W, H))
-  # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
-  # plt.imshow(frame)
-  # plt.show()
-  # exit()
-  # EINDE TEST
 
   try:
     carla_bridge = CarlaBridge(args)
