@@ -23,7 +23,6 @@ from common.realtime import DT_DMON, Ratekeeper
 from selfdrive.car.honda.values import CruiseButtons
 from selfdrive.test.helpers import set_params_enabled
 from tools.sim.lib.can import can_function
-from selfdrive.manager.process_config import REALDM
 
 import cv2
 
@@ -44,7 +43,7 @@ def parse_args(add_args=None):
   parser.add_argument('--spawn_point', dest='num_selected_spawn_point', type=int, default=16)
   # sets dm state, 0: fake dm, 1: real dm, 2: only webcam
   # anything higher than 2 will default to no driver monitoring
-  #parser.add_argument('--dm_mode', type=int, default=0)
+  parser.add_argument('--dm_mode', type=int, default=0)
   return parser.parse_args(add_args)
 
 
@@ -234,17 +233,16 @@ def fake_driver_monitoring(exit_event: threading.Event):
 
 
 def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
-  print("Driver Monitoring enabled")
   # Ratekeeper defines the limit of requests or in this case frames are sent
   # Here the rate is set to 10 frames per second
   rk = Ratekeeper(10)
   # Load the video
   myframeid = 0
   cap = cv2.VideoCapture(0)  # set camera ID here, index X in /dev/videoX
-  # if self._args.dm_mode == 2:
-  #   print("Webcam only mode enabled")
-  # if self._args.dm_mode == 1:
-  #   print("Driver Monitoring enabled")
+  if self._args.dm_mode == 2:
+    print("Webcam only mode enabled")
+  if self._args.dm_mode == 1:
+    print("Driver Monitoring enabled")
   while not exit_event.is_set():
     ret, frame = cap.read()
     if not ret:
@@ -416,17 +414,17 @@ class CarlaBridge:
     # launch fake car threads
     self._threads.append(threading.Thread(target=panda_state_function, args=(vehicle_state, self._exit_event,)))
     self._threads.append(threading.Thread(target=peripheral_state_function, args=(self._exit_event,)))
-    # if self._args.dm_mode in (1, 2):
-    #   # 1: Enables real driver monitoring in the simulator
-    #   # 2: Enables camera only mode
-    #   self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
-    # else:
-    #   # Enables fake driver monitoring in the simulator
-    #   self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
-    if REALDM:
+    if self._args.dm_mode in (1, 2):
+      # 1: Enables real driver monitoring in the simulator
+      # 2: Enables camera only mode
       self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
     else:
+      # Enables fake driver monitoring in the simulator
       self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
+    # if REALDM:
+    #   self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
+    # else:
+    #   self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
     self._threads.append(threading.Thread(target=can_function_runner, args=(vehicle_state, self._exit_event,)))
     for t in self._threads:
       t.start()
