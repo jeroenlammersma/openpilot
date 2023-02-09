@@ -39,6 +39,7 @@ pm = messaging.PubMaster(
   ['roadCameraState', 'wideRoadCameraState', 'driverCameraState', 'sensorEvents', 'can', "gpsLocationExternal"])
 sm = messaging.SubMaster(['carControl', 'controlsState'])
 
+
 def parse_args(add_args=None):
   parser = argparse.ArgumentParser(description='Bridge between CARLA and openpilot.')
   parser.add_argument('--joystick', action='store_true')
@@ -124,17 +125,10 @@ class Camerad:
     img = img[:, :, [0, 1, 2]].copy()
 
     # convert RGB frame to YUV
-    rgb = np.reshape(img, (H, W * 3))
-    rgb_cl = cl_array.to_device(self.queue, rgb)
-    yuv_cl = cl_array.empty_like(rgb_cl)
-    self.krnl(self.queue, (np.int32(self.Wdiv4), np.int32(self.Hdiv4)), None, rgb_cl.data, yuv_cl.data).wait()
-    yuv = np.resize(yuv_cl.get(), rgb.size // 2)
+    yuv, rgb = self.convertRGBtoYUV(img)
     eof = int(frame_id * 0.05 * 1e9)
 
     self.vipc_server.send(yuv_type, yuv.data.tobytes(), frame_id, eof, eof)
-
-    if yuv_type == VisionStreamType.VISION_STREAM_DRIVER:
-      self.vipc_webcam_gui_server.send(yuv_type, rgb.data.tobytes(), frame_id, eof, eof)
 
     dat = messaging.new_message(pub_type)
     msg = {
@@ -145,6 +139,14 @@ class Camerad:
     }
     setattr(dat, pub_type, msg)
     pm.send(pub_type, dat)
+
+  def convertRGBtoYUV(self, img):
+    rgb = np.reshape(img, (H, W * 3))
+    rgb_cl = cl_array.to_device(self.queue, rgb)
+    yuv_cl = cl_array.empty_like(rgb_cl)
+    self.krnl(self.queue, (np.int32(self.Wdiv4), np.int32(self.Hdiv4)), None, rgb_cl.data, yuv_cl.data).wait()
+    yuv = np.resize(yuv_cl.get(), rgb.size // 2)
+    return yuv, rgb
 
 
 def imu_callback(imu, vehicle_state):
@@ -243,6 +245,7 @@ def fake_driver_monitoring(exit_event: threading.Event):
 
     time.sleep(DT_DMON)
 
+
 def webcam_gui_function():
   app = QtWidgets.QApplication([])
 
@@ -251,7 +254,6 @@ def webcam_gui_function():
 
   app.exec_()
 
-  # app.exec_()
 
 def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
   # Ratekeeper defines the limit of requests or in this case frames are sent
@@ -276,7 +278,15 @@ def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
     if self._args.dm_mode == 1:
       camerad.cam_callback_driver(frame)
 
+    img = np.reshape(frame, (H, W, 4))
+    img = img[:, :, [0, 1, 2]].copy()
+    yuv, rgb = camerad.convertRGBtoYUV(img)
+    eof = int(camerad.frame_driver_id * 0.05 * 1e9)
+    camerad.vipc_webcam_gui_server.send(VisionStreamType.VISION_STREAM_DRIVER, rgb.data.tobytes(),
+                                        camerad.frame_driver_id, eof, eof)
+
     rk.keep_time()
+
 
 def can_function_runner(vs: VehicleState, exit_event: threading.Event):
   i = 0
