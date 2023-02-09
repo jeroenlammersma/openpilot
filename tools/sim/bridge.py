@@ -296,7 +296,7 @@ class CarlaBridge:
     self._exit_event = threading.Event()
     self._threads = []
     self._keep_alive = True
-    self.started = False
+    self.started = Falsereads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
     signal.signal(signal.SIGTERM, self._on_shutdown)
     self._exit = threading.Event()
 
@@ -414,10 +414,13 @@ class CarlaBridge:
     # launch fake car threads
     self._threads.append(threading.Thread(target=panda_state_function, args=(vehicle_state, self._exit_event,)))
     self._threads.append(threading.Thread(target=peripheral_state_function, args=(self._exit_event,)))
-    if self._args.dm_mode in (1, 2):
+    if self._args.dm_mode == 1:
       # 1: Enables real driver monitoring in the simulator
-      # 2: Enables camera only mode
       self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
+    elif self._args.dm_mode == 2:
+      # 2: Enables camera only mode with fake driver monitoring
+      self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
+      self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
     else:
       # Enables fake driver monitoring in the simulator
       self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))

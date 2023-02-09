@@ -5,9 +5,9 @@ export NOBOARD="1"
 export SIMULATION="1"
 export FINGERPRINT="HONDA CIVIC 2016"
 export BLOCK="camerad,encoderd"
-read -p "Do you want to enable Driver Monitoring? (y/n)";
+read -p "Do you want to enable Driver Monitoring in the simulator? (y/n)";
 if [ "${REPLY}" == "y" ]; then
-  export REALDM="1"
+  export SIMDM="1"
 fi
 if [[ "$CI" ]]; then
   # TODO: offscreen UI should work
