@@ -49,6 +49,7 @@ def parse_args(add_args=None):
   parser.add_argument('--spawn_point', dest='num_selected_spawn_point', type=int, default=16)
   # sets dm state, 0: fake dm, 1: real dm, 2: only webcam
   # anything higher than 2 will default to no driver monitoring
+  #TODO: enum maken
   parser.add_argument('--dm_mode', type=int, default=0)
   return parser.parse_args(add_args)
 
@@ -140,6 +141,7 @@ class Camerad:
     setattr(dat, pub_type, msg)
     pm.send(pub_type, dat)
 
+  # TODO: Static maken
   def convertRGBtoYUV(self, img):
     rgb = np.reshape(img, (H, W * 3))
     rgb_cl = cl_array.to_device(self.queue, rgb)
@@ -429,6 +431,7 @@ class CarlaBridge:
 
     self._carla_objects.extend([imu, gps])
 
+    #TODO: in aparte functie zetten
     # launch fake car threads
     self._threads.append(threading.Thread(target=panda_state_function, args=(vehicle_state, self._exit_event,)))
     self._threads.append(threading.Thread(target=peripheral_state_function, args=(self._exit_event,)))
