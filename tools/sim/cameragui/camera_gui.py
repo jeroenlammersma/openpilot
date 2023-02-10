@@ -14,8 +14,8 @@ W = 1928
 class Thread(QThread):
   changePixmap = pyqtSignal(QImage)
 
-#TODO: lange functie opdelen in kleinere functies
-#TODO: in eigen module zetten
+  # TODO: lange functie opdelen in kleinere functies
+  # TODO: in eigen module zetten
   def run(self):
     client = VisionIpcClient("webcamguid", VisionStreamType.VISION_STREAM_DRIVER, False)
     client.connect(True)
@@ -58,12 +58,14 @@ class Thread(QThread):
         pixMap = convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
         self.changePixmap.emit(pixMap)
 
-#TODO: size scaling
+
+# TODO: size scaling
 class CameraWidget(QWidget):
   def __init__(self):
     super().__init__()
     self.label = QLabel(self)
     self.label.resize(640, 480)
+    self.label.hasScaledContents()
     th = Thread(self)
     th.changePixmap.connect(self.set_image)
     th.start()

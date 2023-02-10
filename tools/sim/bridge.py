@@ -3,8 +3,6 @@ import argparse
 import math
 import os
 import signal
-import sys
-import sysconfig
 import threading
 import time
 from multiprocessing import Process, Queue
@@ -24,10 +22,10 @@ from common.params import Params
 from common.realtime import DT_DMON, Ratekeeper
 from selfdrive.car.honda.values import CruiseButtons
 from selfdrive.test.helpers import set_params_enabled
-from tools.sim.camera_gui import CameraWidget
+from tools.sim.cameragui.camera_gui import CameraWidget
 from tools.sim.lib.can import can_function
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 
 import cv2
 
@@ -49,8 +47,9 @@ def parse_args(add_args=None):
   parser.add_argument('--spawn_point', dest='num_selected_spawn_point', type=int, default=16)
   # sets dm state, 0: fake dm, 1: real dm, 2: only webcam
   # anything higher than 2 will default to no driver monitoring
-  #TODO: enum maken
-  parser.add_argument('--dm_mode', type=int, default=0)
+  # TODO: enum maken
+  parser.add_argument('--dm')
+  parser.add_argument('--camera_gui')
   return parser.parse_args(add_args)
 
 
@@ -126,7 +125,7 @@ class Camerad:
     img = img[:, :, [0, 1, 2]].copy()
 
     # convert RGB frame to YUV
-    yuv, rgb = self.convertRGBtoYUV(img)
+    yuv, rgb = self.convert_rgb_to_yuv(img)
     eof = int(frame_id * 0.05 * 1e9)
 
     self.vipc_server.send(yuv_type, yuv.data.tobytes(), frame_id, eof, eof)
@@ -141,8 +140,8 @@ class Camerad:
     setattr(dat, pub_type, msg)
     pm.send(pub_type, dat)
 
-  # TODO: Static maken
-  def convertRGBtoYUV(self, img):
+  @staticmethod
+  def convert_rgb_to_yuv(self, img):
     rgb = np.reshape(img, (H, W * 3))
     rgb_cl = cl_array.to_device(self.queue, rgb)
     yuv_cl = cl_array.empty_like(rgb_cl)
@@ -282,7 +281,7 @@ def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
 
     img = np.reshape(frame, (H, W, 4))
     img = img[:, :, [0, 1, 2]].copy()
-    yuv, rgb = camerad.convertRGBtoYUV(img)
+    yuv, rgb = camerad.convert_rgb_to_yuv(img)
     eof = int(camerad.frame_driver_id * 0.05 * 1e9)
     camerad.vipc_webcam_gui_server.send(VisionStreamType.VISION_STREAM_DRIVER, rgb.data.tobytes(),
                                         camerad.frame_driver_id, eof, eof)
@@ -431,20 +430,22 @@ class CarlaBridge:
 
     self._carla_objects.extend([imu, gps])
 
-    #TODO: in aparte functie zetten
+    def start_dm_threads():
+      if self._args.dm:
+        # 1: Enables real driver monitoring in the simulator
+        self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
+      elif self._args.camera_gui:
+        # 2: Enables camera only mode with fake driver monitoring
+        self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
+        self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
+      else:
+        # Enables fake driver monitoring in the simulator
+        self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
+
     # launch fake car threads
     self._threads.append(threading.Thread(target=panda_state_function, args=(vehicle_state, self._exit_event,)))
     self._threads.append(threading.Thread(target=peripheral_state_function, args=(self._exit_event,)))
-    if self._args.dm_mode == 1:
-      # 1: Enables real driver monitoring in the simulator
-      self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
-    elif self._args.dm_mode == 2:
-      # 2: Enables camera only mode with fake driver monitoring
-      self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
-      self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
-    else:
-      # Enables fake driver monitoring in the simulator
-      self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
+    start_dm_threads()
     self._threads.append(threading.Thread(target=can_function_runner, args=(vehicle_state, self._exit_event,)))
     for t in self._threads:
       t.start()
