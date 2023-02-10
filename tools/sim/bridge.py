@@ -45,10 +45,9 @@ def parse_args(add_args=None):
   parser.add_argument('--dual_camera', action='store_true')
   parser.add_argument('--town', type=str, default='Town04_Opt')
   parser.add_argument('--spawn_point', dest='num_selected_spawn_point', type=int, default=16)
-  # sets dm state, 0: fake dm, 1: real dm, 2: only webcam
-  # anything higher than 2 will default to no driver monitoring
-  # TODO: enum maken
+  #Enables Driver Monitoring
   parser.add_argument('--dm', action='store_true')
+  #Enables Camera only mode
   parser.add_argument('--camera_gui', action='store_true')
   return parser.parse_args(add_args)
 
