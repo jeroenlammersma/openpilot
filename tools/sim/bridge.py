@@ -22,15 +22,21 @@ from common.params import Params
 from common.realtime import DT_DMON, Ratekeeper
 from selfdrive.car.honda.values import CruiseButtons
 from selfdrive.test.helpers import set_params_enabled
+from tools.sim.cameragui.camera_gui import CameraWidget
 from tools.sim.lib.can import can_function
+
+from PyQt5 import QtWidgets
+
+import cv2
 
 W, H = 1928, 1208
 REPEAT_COUNTER = 5
 PRINT_DECIMATION = 100
 STEER_RATIO = 15.
-
-pm = messaging.PubMaster(['roadCameraState', 'wideRoadCameraState', 'sensorEvents', 'can', "gpsLocationExternal"])
+pm = messaging.PubMaster(
+  ['roadCameraState', 'wideRoadCameraState', 'driverCameraState', 'sensorEvents', 'can', "gpsLocationExternal"])
 sm = messaging.SubMaster(['carControl', 'controlsState'])
+
 
 def parse_args(add_args=None):
   parser = argparse.ArgumentParser(description='Bridge between CARLA and openpilot.')
@@ -39,7 +45,10 @@ def parse_args(add_args=None):
   parser.add_argument('--dual_camera', action='store_true')
   parser.add_argument('--town', type=str, default='Town04_Opt')
   parser.add_argument('--spawn_point', dest='num_selected_spawn_point', type=int, default=16)
-
+  #Enables Driver Monitoring
+  parser.add_argument('--dm', action='store_true')
+  #Enables Camera only mode
+  parser.add_argument('--camera_gui', action='store_true')
   return parser.parse_args(add_args)
 
 
@@ -69,16 +78,22 @@ class Camerad:
   def __init__(self):
     self.frame_road_id = 0
     self.frame_wide_id = 0
+    self.frame_driver_id = 0
     self.vipc_server = VisionIpcServer("camerad")
 
     self.vipc_server.create_buffers(VisionStreamType.VISION_STREAM_ROAD, 5, False, W, H)
     self.vipc_server.create_buffers(VisionStreamType.VISION_STREAM_WIDE_ROAD, 5, False, W, H)
+    self.vipc_server.create_buffers(VisionStreamType.VISION_STREAM_DRIVER, 5, False, W, H)
     self.vipc_server.start_listener()
+
+    self.vipc_webcam_gui_server = VisionIpcServer("webcamguid")
+    self.vipc_webcam_gui_server.create_buffers(VisionStreamType.VISION_STREAM_DRIVER, 1, True, W, H)
+    self.vipc_webcam_gui_server.start_listener()
 
     # set up for pyopencl rgb to yuv conversion
     self.ctx = cl.create_some_context()
     self.queue = cl.CommandQueue(self.ctx)
-    cl_arg = f" -DHEIGHT={H} -DWIDTH={W} -DRGB_STRIDE={W * 3} -DUV_WIDTH={W // 2} -DUV_HEIGHT={H // 2} -DRGB_SIZE={W * H} -DCL_DEBUG "
+    cl_arg = f" -DHEIGHT={H} -DWIDTH={W} -DRGB_STRIDE={W * 3} -DUV_WIDTH={W // 2} -DUV_HEIGHT={H // 2} -DRGB_SIZE={W * H} -DCL_DEBUG"
 
     kernel_fn = os.path.join(BASEDIR, "tools/sim/rgb_to_nv12.cl")
     with open(kernel_fn) as f:
@@ -95,17 +110,21 @@ class Camerad:
     self._cam_callback(image, self.frame_wide_id, 'wideRoadCameraState', VisionStreamType.VISION_STREAM_WIDE_ROAD)
     self.frame_wide_id += 1
 
+  def cam_callback_driver(self, image):
+    self._cam_callback(image, self.frame_driver_id, 'driverCameraState', VisionStreamType.VISION_STREAM_DRIVER)
+    self.frame_driver_id += 1
+
   def _cam_callback(self, image, frame_id, pub_type, yuv_type):
-    img = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-    img = np.reshape(img, (H, W, 4))
+
+    if pub_type == "driverCameraState":
+      img = np.reshape(image, (H, W, 4))
+    else:
+      img = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+      img = np.reshape(img, (H, W, 4))
     img = img[:, :, [0, 1, 2]].copy()
 
     # convert RGB frame to YUV
-    rgb = np.reshape(img, (H, W * 3))
-    rgb_cl = cl_array.to_device(self.queue, rgb)
-    yuv_cl = cl_array.empty_like(rgb_cl)
-    self.krnl(self.queue, (np.int32(self.Wdiv4), np.int32(self.Hdiv4)), None, rgb_cl.data, yuv_cl.data).wait()
-    yuv = np.resize(yuv_cl.get(), rgb.size // 2)
+    yuv, rgb = self.convert_rgb_to_yuv(img)
     eof = int(frame_id * 0.05 * 1e9)
 
     self.vipc_server.send(yuv_type, yuv.data.tobytes(), frame_id, eof, eof)
@@ -119,6 +138,15 @@ class Camerad:
     }
     setattr(dat, pub_type, msg)
     pm.send(pub_type, dat)
+
+  def convert_rgb_to_yuv(self, img):
+    rgb = np.reshape(img, (H, W * 3))
+    rgb_cl = cl_array.to_device(self.queue, rgb)
+    yuv_cl = cl_array.empty_like(rgb_cl)
+    self.krnl(self.queue, (np.int32(self.Wdiv4), np.int32(self.Hdiv4)), None, rgb_cl.data, yuv_cl.data).wait()
+    yuv = np.resize(yuv_cl.get(), rgb.size // 2)
+    return yuv, rgb
+
 
 def imu_callback(imu, vehicle_state):
   vehicle_state.bearing_deg = math.degrees(imu.compass)
@@ -197,6 +225,7 @@ def gps_callback(gps, vehicle_state):
 
 
 def fake_driver_monitoring(exit_event: threading.Event):
+  print("Driver Monitoring disabled")
   pm = messaging.PubMaster(['driverStateV2', 'driverMonitoringState'])
   while not exit_event.is_set():
     # dmonitoringmodeld output
@@ -214,6 +243,48 @@ def fake_driver_monitoring(exit_event: threading.Event):
     pm.send('driverMonitoringState', dat)
 
     time.sleep(DT_DMON)
+
+
+def webcam_gui_function():
+  app = QtWidgets.QApplication([])
+
+  widget = CameraWidget()
+  widget.show()
+
+  app.exec_()
+
+
+def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
+  # Ratekeeper defines the limit of requests or in this case frames are sent
+  # Here the rate is set to 10 frames per second
+  rk = Ratekeeper(10)
+  # Load the video
+  myframeid = 0
+  cap = cv2.VideoCapture(0)  # set camera ID here, index X in /dev/videoX
+  if self._args.dm:
+    print("Webcam only mode enabled")
+  if self._args.camera_gui:
+    print("Driver Monitoring enabled")
+  while not exit_event.is_set():
+    ret, frame = cap.read()
+    if not ret:
+      break
+
+    # Frame is resized and the color format is changed.
+    frame = cv2.resize(frame, (W, H))
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+
+    if self._args.dm:
+      camerad.cam_callback_driver(frame)
+
+    img = np.reshape(frame, (H, W, 4))
+    img = img[:, :, [0, 1, 2]].copy()
+    yuv, rgb = camerad.convert_rgb_to_yuv(img)
+    eof = int(camerad.frame_driver_id * 0.05 * 1e9)
+    camerad.vipc_webcam_gui_server.send(VisionStreamType.VISION_STREAM_DRIVER, rgb.data.tobytes(),
+                                        camerad.frame_driver_id, eof, eof)
+
+    rk.keep_time()
 
 
 def can_function_runner(vs: VehicleState, exit_event: threading.Event):
@@ -234,7 +305,6 @@ class CarlaBridge:
 
   def __init__(self, arguments):
     set_params_enabled()
-
     msg = messaging.new_message('liveCalibration')
     msg.liveCalibration.validBlocks = 20
     msg.liveCalibration.rpyCalib = [0.0, 0.0, 0.0]
@@ -305,7 +375,8 @@ class CarlaBridge:
     vehicle_bp = blueprint_library.filter('vehicle.tesla.*')[1]
     vehicle_bp.set_attribute('role_name', 'hero')
     spawn_points = world_map.get_spawn_points()
-    assert len(spawn_points) > self._args.num_selected_spawn_point, f'''No spawn point {self._args.num_selected_spawn_point}, try a value between 0 and
+    assert len(
+      spawn_points) > self._args.num_selected_spawn_point, f'''No spawn point {self._args.num_selected_spawn_point}, try a value between 0 and
       {len(spawn_points)} for this town.'''
     spawn_point = spawn_points[self._args.num_selected_spawn_point]
     vehicle = world.spawn_actor(vehicle_bp, spawn_point)
@@ -340,7 +411,8 @@ class CarlaBridge:
       road_camera = create_camera(fov=40, callback=self._camerad.cam_callback_road)
       self._carla_objects.append(road_camera)
 
-    road_wide_camera = create_camera(fov=120, callback=self._camerad.cam_callback_wide_road)  # fov bigger than 120 shows unwanted artifacts
+    road_wide_camera = create_camera(fov=120,
+                                     callback=self._camerad.cam_callback_wide_road)  # fov bigger than 120 shows unwanted artifacts
     self._carla_objects.append(road_wide_camera)
 
     vehicle_state = VehicleState()
@@ -355,10 +427,23 @@ class CarlaBridge:
     gps.listen(lambda gps: gps_callback(gps, vehicle_state))
 
     self._carla_objects.extend([imu, gps])
+
+    def start_dm_threads():
+      if self._args.dm:
+        # 1: Enables real driver monitoring in the simulator
+        self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
+      elif self._args.camera_gui:
+        # 2: Enables camera only mode with fake driver monitoring
+        self._threads.append(threading.Thread(target=webcam_function, args=(self, self._camerad, self._exit_event)))
+        self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
+      else:
+        # Enables fake driver monitoring in the simulator
+        self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
+
     # launch fake car threads
     self._threads.append(threading.Thread(target=panda_state_function, args=(vehicle_state, self._exit_event,)))
     self._threads.append(threading.Thread(target=peripheral_state_function, args=(self._exit_event,)))
-    self._threads.append(threading.Thread(target=fake_driver_monitoring, args=(self._exit_event,)))
+    start_dm_threads()
     self._threads.append(threading.Thread(target=can_function_runner, args=(vehicle_state, self._exit_event,)))
     for t in self._threads:
       t.start()
