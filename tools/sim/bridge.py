@@ -262,9 +262,9 @@ def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
   # Load the video
   myframeid = 0
   cap = cv2.VideoCapture(0)  # set camera ID here, index X in /dev/videoX
-  if self._args.dm_mode == 2:
+  if self._args.dm:
     print("Webcam only mode enabled")
-  if self._args.dm_mode == 1:
+  if self._args.camera_gui:
     print("Driver Monitoring enabled")
   while not exit_event.is_set():
     ret, frame = cap.read()
@@ -275,7 +275,7 @@ def webcam_function(self, camerad: Camerad, exit_event: threading.Event):
     frame = cv2.resize(frame, (W, H))
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
 
-    if self._args.dm_mode == 1:
+    if self._args.dm:
       camerad.cam_callback_driver(frame)
 
     img = np.reshape(frame, (H, W, 4))
