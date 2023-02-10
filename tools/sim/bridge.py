@@ -140,7 +140,6 @@ class Camerad:
     setattr(dat, pub_type, msg)
     pm.send(pub_type, dat)
 
-  @staticmethod
   def convert_rgb_to_yuv(self, img):
     rgb = np.reshape(img, (H, W * 3))
     rgb_cl = cl_array.to_device(self.queue, rgb)
