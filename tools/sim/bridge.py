@@ -48,8 +48,8 @@ def parse_args(add_args=None):
   # sets dm state, 0: fake dm, 1: real dm, 2: only webcam
   # anything higher than 2 will default to no driver monitoring
   # TODO: enum maken
-  parser.add_argument('--dm')
-  parser.add_argument('--camera_gui')
+  parser.add_argument('--dm', action='store_true')
+  parser.add_argument('--camera_gui', action='store_true')
   return parser.parse_args(add_args)
 
 
